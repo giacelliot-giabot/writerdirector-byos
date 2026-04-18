@@ -1,6 +1,9 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import SignIn from './pages/SignIn'
 import Dashboard from './pages/Dashboard'
+import ProjectView from './pages/ProjectView'
+import SceneOutline from './pages/SceneOutline'
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -13,13 +16,24 @@ function AppRoutes() {
     )
   }
 
-  return user ? <Dashboard /> : <SignIn />
+  if (!user) return <SignIn />
+
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/project/:projectId" element={<ProjectView />} />
+      <Route path="/project/:projectId/scene/:sceneId" element={<SceneOutline />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </AuthProvider>
   )
 }

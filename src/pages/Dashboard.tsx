@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -7,11 +8,13 @@ import {
   createProject,
   renameProject,
   deleteProject,
+  touchProject,
 } from '../lib/projects'
 import type { Project } from '../lib/projects'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>([])
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -153,7 +156,14 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <button className="mt-auto self-start bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                <button
+                  onClick={async () => {
+                    if (!user) return
+                    await touchProject(user.uid, project.id)
+                    navigate(`/project/${project.id}`)
+                  }}
+                  className="mt-auto self-start bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                >
                   Open →
                 </button>
 
