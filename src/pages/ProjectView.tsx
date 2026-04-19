@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   DndContext,
@@ -23,6 +23,7 @@ import {
   createScene,
   deleteScene,
   reorderScenes,
+  updateSceneHeader,
   type Scene,
 } from '../lib/scenes'
 import ProgressDots from '../components/ProgressDots'
@@ -121,6 +122,11 @@ export default function ProjectView() {
     navigate(`/project/${projectId}/scene/${sceneId}`)
   }
 
+  async function handleRenameScene(sceneId: string, header: string) {
+    if (!user || !projectId) return
+    await updateSceneHeader(user.uid, projectId, sceneId, header.toUpperCase())
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
@@ -198,6 +204,7 @@ export default function ProjectView() {
                   index={index}
                   projectId={projectId!}
                   onOpen={() => openScene(scene.id)}
+                  onRename={(header) => handleRenameScene(scene.id, header)}
                 />
               ))}
             </div>
@@ -208,15 +215,71 @@ export default function ProjectView() {
   )
 }
 
-function SceneCard({ scene, index, projectId, onOpen }: { scene: Scene; index: number; projectId: string; onOpen: () => void }) {
+function SceneCard({
+  scene,
+  index,
+  projectId,
+  onOpen,
+  onRename,
+}: {
+  scene: Scene
+  index: number
+  projectId: string
+  onOpen: () => void
+  onRename: (header: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(scene.sceneHeader || '')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  // Keep draft in sync if scene updates externally while not editing
+  useEffect(() => {
+    if (!editing) setDraft(scene.sceneHeader || '')
+  }, [scene.sceneHeader, editing])
+
+  function commit() {
+    const value = draft.trim().toUpperCase()
+    setDraft(value)
+    setEditing(false)
+    onRename(value)
+  }
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors">
       <div className="flex-1 min-w-0 space-y-3">
         <div className="flex items-center gap-3">
-          <span className="text-zinc-600 text-sm font-mono">{String(index + 1).padStart(2, '0')}</span>
-          <h2 className="text-zinc-100 font-semibold text-sm truncate">
-            {scene.sceneHeader || <span className="text-zinc-500 italic font-normal">Untitled scene</span>}
-          </h2>
+          <span className="text-zinc-600 text-sm font-mono shrink-0">{String(index + 1).padStart(2, '0')}</span>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value.toUpperCase())}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commit()
+                if (e.key === 'Escape') { setDraft(scene.sceneHeader || ''); setEditing(false) }
+              }}
+              placeholder="INT. LOCATION — DAY"
+              className="flex-1 bg-transparent text-zinc-100 font-mono text-sm font-semibold placeholder-zinc-600 outline-none uppercase tracking-wide border-b border-zinc-600 focus:border-zinc-400 transition-colors"
+            />
+          ) : (
+            <button
+              onClick={() => setEditing(true)}
+              className="flex-1 text-left group flex items-center gap-2"
+              title="Click to rename"
+            >
+              <span className="text-zinc-100 font-semibold text-sm font-mono truncate">
+                {scene.sceneHeader || <span className="text-zinc-500 italic font-normal">Untitled scene</span>}
+              </span>
+              <span className="text-zinc-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                edit
+              </span>
+            </button>
+          )}
         </div>
         <ProgressDots state={scene.state} projectId={projectId} sceneId={scene.id} />
       </div>

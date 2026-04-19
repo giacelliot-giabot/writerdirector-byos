@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import type { ScriptElement } from '../lib/scenes'
 
 // ─── Screenplay format config ──────────────────────────────────────────────
@@ -12,12 +12,12 @@ import type { ScriptElement } from '../lib/scenes'
 type BlockType = ScriptElement['type']
 
 const BLOCK_STYLE: Record<BlockType, string> = {
-  scene_heading: 'font-mono text-sm font-bold tracking-wide w-full text-left',
+  scene_heading: 'font-mono text-sm tracking-wide w-full text-left',
   action:        'font-mono text-sm w-full text-left',
-  character:     'font-mono text-sm font-semibold uppercase w-full pl-[37%]',
+  character:     'font-mono text-sm uppercase w-full pl-[37%]',
   dialogue:      'font-mono text-sm w-full px-[17%]',
   parenthetical: 'font-mono text-sm italic w-full pl-[27%] pr-[15%]',
-  transition:    'font-mono text-sm font-semibold uppercase w-full text-right',
+  transition:    'font-mono text-sm uppercase w-full text-right',
 }
 
 const BLOCK_LABEL: Record<BlockType, string> = {
@@ -58,6 +58,34 @@ interface Props {
 
 export default function ScriptEditor({ blocks, onChange, readOnly = false }: Props) {
   const refs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
+  const [showQuickKeys, setShowQuickKeys] = useState(false)
+  const rafId = useRef<number | null>(null)
+
+  // Cancel any pending programmatic focus the moment the user clicks anywhere.
+  // This prevents Enter-triggered focus from stealing the click target.
+  useEffect(() => {
+    function onMouseDown() {
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current)
+        rafId.current = null
+      }
+    }
+    window.addEventListener('mousedown', onMouseDown)
+    return () => window.removeEventListener('mousedown', onMouseDown)
+  }, [])
+
+  // Cmd+Shift+/ — open/close quick keys (the universal keyboard shortcut convention)
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const meta = e.metaKey || e.ctrlKey
+      if (meta && e.shiftKey && e.key === '/') {
+        e.preventDefault()
+        setShowQuickKeys((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   // Auto-resize all textareas when blocks change
   useEffect(() => {
@@ -65,7 +93,9 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   }, [blocks])
 
   function focus(id: string, toEnd = true) {
-    requestAnimationFrame(() => {
+    if (rafId.current !== null) cancelAnimationFrame(rafId.current)
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = null
       const el = refs.current.get(id)
       if (!el) return
       el.focus()
@@ -96,12 +126,6 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
 
   const handleChange = useCallback(
     (block: ScriptElement, raw: string) => {
-      // Double-enter in dialogue → split and create action block
-      if (block.type === 'dialogue' && raw.endsWith('\n\n')) {
-        update(block.id, { text: raw.slice(0, -2) })
-        insertAfter(block.id, 'action')
-        return
-      }
       // ( at beginning of empty dialogue → parenthetical
       if (block.type === 'dialogue' && raw === '(') {
         update(block.id, { type: 'parenthetical', text: '' })
@@ -118,12 +142,14 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
       const meta = e.metaKey || e.ctrlKey
 
       // ── Global shortcuts ──────────────────────────────────────────
-      if (meta && e.shiftKey && e.key === 'H') {
+      // Cmd+Shift+S → new scene heading  (S = Slug/Scene)
+      if (meta && e.shiftKey && e.key === 'S') {
         e.preventDefault()
         insertAfter(block.id, 'scene_heading')
         return
       }
-      if (meta && e.shiftKey && e.key === 'T') {
+      // Cmd+Shift+E → new transition  (E = End/Exit scene)
+      if (meta && e.shiftKey && e.key === 'E') {
         e.preventDefault()
         insertAfter(block.id, 'transition')
         return
@@ -145,22 +171,27 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
 
       // ── Enter ─────────────────────────────────────────────────────
       if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        if (block.type === 'scene_heading' || block.type === 'transition') {
+          insertAfter(block.id, 'action')
+          return
+        }
+        if (block.type === 'action') {
+          insertAfter(block.id, 'action')
+          return
+        }
         if (block.type === 'character') {
-          e.preventDefault()
           insertAfter(block.id, 'dialogue')
           return
         }
         if (block.type === 'parenthetical') {
-          e.preventDefault()
           insertAfter(block.id, 'dialogue')
           return
         }
-        if (block.type === 'scene_heading' || block.type === 'transition') {
-          e.preventDefault()
+        if (block.type === 'dialogue') {
           insertAfter(block.id, 'action')
           return
         }
-        // dialogue: let textarea handle newlines; double-enter caught in onChange
       }
 
       // ── Backspace on empty block → delete ─────────────────────────
@@ -172,13 +203,6 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
     },
     [blocks, onChange] // eslint-disable-line react-hooks/exhaustive-deps
   )
-
-  // Initialise with a single action block if empty
-  useEffect(() => {
-    if (blocks.length === 0 && !readOnly) {
-      onChange([{ id: crypto.randomUUID(), type: 'action', text: '' }])
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (readOnly) {
     return (
@@ -193,26 +217,131 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   }
 
   return (
-    <div className="w-full space-y-0.5">
-      {blocks.map((block) => (
-        <BlockRow
-          key={block.id}
-          block={block}
-          label={BLOCK_LABEL[block.type]}
-          textareaClass={BLOCK_STYLE[block.type]}
-          refCallback={(el) => {
-            if (el) refs.current.set(block.id, el)
-            else refs.current.delete(block.id)
-          }}
-          onChange={(raw) => handleChange(block, raw)}
-          onKeyDown={(e) => handleKeyDown(e, block)}
-        />
-      ))}
-    </div>
+    <>
+      <div className="w-full space-y-0.5">
+        {blocks.map((block) => (
+          <BlockRow
+            key={block.id}
+            block={block}
+            label={BLOCK_LABEL[block.type]}
+            textareaClass={BLOCK_STYLE[block.type]}
+            refCallback={(el) => {
+              if (el) refs.current.set(block.id, el)
+              else refs.current.delete(block.id)
+            }}
+            onChange={(raw) => handleChange(block, raw)}
+            onKeyDown={(e) => handleKeyDown(e, block)}
+          />
+        ))}
+      </div>
+
+      {/* Quick keys hint */}
+      <div className="mt-16 text-center">
+        <button
+          onClick={() => setShowQuickKeys(true)}
+          className="text-zinc-700 text-xs hover:text-zinc-500 transition-colors"
+        >
+          ⌘ Shift / — quick keys
+        </button>
+      </div>
+
+      {/* Quick keys modal */}
+      {showQuickKeys && <QuickKeysModal onClose={() => setShowQuickKeys(false)} />}
+    </>
   )
 }
 
 // ─── BlockRow ──────────────────────────────────────────────────────────────
+
+// ─── Quick Keys Modal ──────────────────────────────────────────────────────
+
+const QUICK_KEYS = [
+  {
+    section: 'Navigation',
+    keys: [
+      { keys: 'Enter', where: 'Scene heading', result: 'New action line' },
+      { keys: 'Enter', where: 'Action line', result: 'New action line' },
+      { keys: 'Tab', where: 'Action line', result: 'Convert to character cue (auto-caps)' },
+      { keys: 'Tab', where: 'Character cue', result: 'Convert back to action line' },
+      { keys: 'Enter', where: 'Character cue', result: 'New dialogue block' },
+      { keys: 'Enter', where: 'Dialogue', result: 'New action line' },
+      { keys: '(', where: 'Empty dialogue', result: 'Convert to parenthetical' },
+      { keys: 'Enter', where: 'Parenthetical', result: 'New dialogue block' },
+      { keys: 'Tab', where: 'Dialogue', result: 'New character cue after' },
+      { keys: 'Backspace', where: 'Empty block', result: 'Delete block' },
+    ],
+  },
+  {
+    section: 'Insert',
+    keys: [
+      { keys: '⌘ Shift S', where: 'Anywhere', result: 'Insert scene heading after current block' },
+      { keys: '⌘ Shift E', where: 'Anywhere', result: 'Insert transition after current block' },
+    ],
+  },
+  {
+    section: 'Panels & Passes',
+    keys: [
+      { keys: '⌘ \\', where: 'Anywhere', result: 'Toggle outline / reference panel' },
+      { keys: '⌘ →', where: 'Community Theater', result: 'Advance to Liars Pass' },
+      { keys: '⌘ ←', where: 'Community Theater', result: 'Back to Scenes' },
+      { keys: '⌘ ←', where: 'Liars Pass', result: 'Back to Scenes' },
+    ],
+  },
+  {
+    section: 'Quick Keys',
+    keys: [
+      { keys: '⌘ Shift /', where: 'Anywhere', result: 'Open / close this panel' },
+    ],
+  },
+]
+
+function QuickKeysModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+          <span className="text-zinc-200 text-sm font-medium tracking-wide">Quick Keys</span>
+          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">
+            ESC to close
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
+          {QUICK_KEYS.map((group) => (
+            <div key={group.section}>
+              <p className="text-zinc-600 text-[10px] uppercase tracking-widest mb-2">{group.section}</p>
+              <div className="space-y-1.5">
+                {group.keys.map((row, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <kbd className="shrink-0 font-mono text-[11px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded border border-zinc-700 whitespace-nowrap min-w-[90px] text-center">
+                      {row.keys}
+                    </kbd>
+                    <span className="text-zinc-600 text-xs pt-0.5 shrink-0 w-32">{row.where}</span>
+                    <span className="text-zinc-400 text-xs pt-0.5">{row.result}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function resize(el: HTMLTextAreaElement) {
   el.style.height = 'auto'

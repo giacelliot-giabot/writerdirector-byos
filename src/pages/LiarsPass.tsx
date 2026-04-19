@@ -29,7 +29,7 @@ export default function LiarsPass() {
   const [scene, setScene] = useState<Scene | null>(null)
   const [blocks, setBlocks] = useState<ScriptElement[]>([])
   const [panelOpen, setPanelOpen] = useState(true)
-  const [initialized, setInitialized] = useState(false)
+  const initializedRef = useRef(false)
 
   const debouncedBlocks = useDebounce(blocks, 1000)
   const saveTimer = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -40,20 +40,25 @@ export default function LiarsPass() {
       const found = scenes.find((s) => s.id === sceneId)
       if (!found) return
       setScene(found)
-      if (!initialized) {
-        setBlocks(found.liarsPass?.content ?? [])
-        setInitialized(true)
+      if (!initializedRef.current) {
+        initializedRef.current = true
+        const content = found.liarsPass?.content ?? []
+        setBlocks(
+          content.length > 0
+            ? content
+            : [{ id: crypto.randomUUID(), type: 'scene_heading' as const, text: '' }]
+        )
       }
     })
-  }, [user, projectId, sceneId, initialized])
+  }, [user, projectId, sceneId])
 
   // Debounced save
   useEffect(() => {
-    if (!initialized || !user || !projectId || !sceneId) return
+    if (!initializedRef.current || !user || !projectId || !sceneId) return
     const hasContent = debouncedBlocks.some((b) => b.text.trim().length > 0)
     const newState = hasContent ? 'liars_pass_complete' : 'liars_pass_in_progress'
     updateLiarsPassContent(user.uid, projectId, sceneId, debouncedBlocks, newState)
-  }, [debouncedBlocks, initialized, user, projectId, sceneId])
+  }, [debouncedBlocks, user, projectId, sceneId])
 
   // 30-second interval save
   useEffect(() => {
@@ -69,7 +74,7 @@ export default function LiarsPass() {
     function onKey(e: KeyboardEvent) {
       const meta = e.metaKey || e.ctrlKey
       if (meta && e.key === '\\') { e.preventDefault(); setPanelOpen((o) => !o) }
-      if (meta && e.key === 'ArrowLeft') { e.preventDefault(); navigate(`/project/${projectId}/scene/${sceneId}/community-theater`) }
+      if (meta && e.key === 'ArrowLeft') { e.preventDefault(); navigate(`/project/${projectId}`) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -89,8 +94,8 @@ export default function LiarsPass() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="border-b border-zinc-800 px-6 py-3 flex items-center gap-4">
-        <Link to={`/project/${projectId}/scene/${sceneId}/community-theater`} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors shrink-0">
-          ← CT Pass
+        <Link to={`/project/${projectId}`} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors shrink-0">
+          ← Scenes
         </Link>
         <span className="text-zinc-700">|</span>
         <div className="flex-1">

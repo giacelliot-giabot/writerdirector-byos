@@ -44,14 +44,20 @@ function dotStatus(index: number, state: SceneState): 'empty' | 'active' | 'comp
   return 'empty'
 }
 
+// A dot is navigable if it's been reached OR the previous step is complete
+// (so you can advance to CT once outline is done, LP once CT is done)
+const navigableStates: Record<number, SceneState[]> = {
+  0: ['outline_in_progress', 'outline_complete', 'community_theater_in_progress', 'community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
+  1: ['outline_complete', 'community_theater_in_progress', 'community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
+  2: ['community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
+}
+
 export default function ProgressDots({ state, projectId, sceneId }: Props) {
   const navigate = useNavigate()
 
   function handleClick(i: number) {
     if (!projectId || !sceneId) return
-    // Only allow navigating to reached states
-    const status = dotStatus(i, state)
-    if (status === 'empty') return
+    if (!navigableStates[i]?.includes(state)) return
     navigate(dots[i].path(projectId, sceneId))
   }
 
@@ -59,7 +65,7 @@ export default function ProgressDots({ state, projectId, sceneId }: Props) {
     <div className="flex items-center gap-6">
       {dots.map((dot, i) => {
         const status = dotStatus(i, state)
-        const clickable = !!projectId && status !== 'empty'
+        const clickable = !!projectId && !!navigableStates[i]?.includes(state)
         return (
           <button
             key={dot.label}
