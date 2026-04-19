@@ -5,3 +5,22 @@
     @apply bg-zinc-950 text-zinc-100 antialiased;
   }
 }
+
+/* Light mode — invert the full palette, then re-invert media (images, etc.) */
+html.light body {
+  filter: invert(1) hue-rotate(180deg);
+  background-color: #fff;
+}
+
+html.light img,
+html.light video,
+html.light canvas,
+html.light svg[data-emoji] {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Emoji buttons shouldn't be double-inverted */
+html.light button > span[role="img"],
+html.light .no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}

@@ -22,15 +22,19 @@ export type SceneState =
   | 'liars_pass_in_progress'
   | 'liars_pass_complete'
 
+export interface CharacterData {
+  id: string
+  name: string
+  want: string           // Q1: what do they want/need from scene partner
+  comingFrom: string     // Q2: where coming from, expectation, all 5 senses
+  realization: string    // Q3: when do they realize they're not in the scene they thought
+  needsToGetThrough: string  // Q4: what do they need from scene partner to get through
+  whereNow: string       // Q5: where is the character now
+}
+
 export interface SceneOutline {
-  characters: string
-  interaction: string
-  actuallyGets: string
-  sceneTheyThinkTheyreIn: string
-  momentOfRealization: string
-  whatGetsThemThrough: string
+  characters: CharacterData[]
   settingPlot: string
-  whereCharacterEnds: string
   completedAt: Timestamp | null
 }
 
@@ -58,15 +62,21 @@ export interface Scene {
   }
 }
 
+export function emptyCharacter(name = ''): CharacterData {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    want: '',
+    comingFrom: '',
+    realization: '',
+    needsToGetThrough: '',
+    whereNow: '',
+  }
+}
+
 const emptyOutline = (): SceneOutline => ({
-  characters: '',
-  interaction: '',
-  actuallyGets: '',
-  sceneTheyThinkTheyreIn: '',
-  momentOfRealization: '',
-  whatGetsThemThrough: '',
+  characters: [],
   settingPlot: '',
-  whereCharacterEnds: '',
   completedAt: null,
 })
 
@@ -119,7 +129,7 @@ export async function updateSceneOutline(
   userId: string,
   projectId: string,
   sceneId: string,
-  outline: Partial<SceneOutline>,
+  outline: Partial<Omit<SceneOutline, 'completedAt'>>,
   state?: SceneState
 ) {
   const update: Record<string, unknown> = {}
@@ -151,15 +161,21 @@ export async function reorderScenes(
   await batch.commit()
 }
 
+export function characterIsComplete(c: CharacterData): boolean {
+  return (
+    c.name.trim().length > 0 &&
+    c.want.trim().length > 0 &&
+    c.comingFrom.trim().length > 0 &&
+    c.realization.trim().length > 0 &&
+    c.needsToGetThrough.trim().length > 0 &&
+    c.whereNow.trim().length > 0
+  )
+}
+
 export function outlineIsComplete(outline: SceneOutline): boolean {
   return (
-    outline.characters.trim().length > 0 &&
-    outline.interaction.trim().length > 0 &&
-    outline.actuallyGets.trim().length > 0 &&
-    outline.sceneTheyThinkTheyreIn.trim().length > 0 &&
-    outline.momentOfRealization.trim().length > 0 &&
-    outline.whatGetsThemThrough.trim().length > 0 &&
-    outline.settingPlot.trim().length > 0 &&
-    outline.whereCharacterEnds.trim().length > 0
+    outline.characters.length > 0 &&
+    outline.characters.every(characterIsComplete) &&
+    outline.settingPlot.trim().length > 0
   )
 }
