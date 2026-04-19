@@ -149,6 +149,30 @@ export async function updateSceneState(
   await updateDoc(sceneRef(userId, projectId, sceneId), { state })
 }
 
+export async function updateCommunityTheaterContent(
+  userId: string,
+  projectId: string,
+  sceneId: string,
+  content: ScriptElement[],
+  state?: SceneState
+) {
+  const update: Record<string, unknown> = { 'communityTheater.content': content }
+  if (state) update.state = state
+  await updateDoc(sceneRef(userId, projectId, sceneId), update)
+}
+
+export async function updateLiarsPassContent(
+  userId: string,
+  projectId: string,
+  sceneId: string,
+  content: ScriptElement[],
+  state?: SceneState
+) {
+  const update: Record<string, unknown> = { 'liarsPass.content': content }
+  if (state) update.state = state
+  await updateDoc(sceneRef(userId, projectId, sceneId), update)
+}
+
 export async function reorderScenes(
   userId: string,
   projectId: string,

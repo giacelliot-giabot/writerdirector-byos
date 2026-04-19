@@ -171,7 +171,7 @@ export default function SceneOutline() {
         </Link>
         <span className="text-zinc-700">|</span>
         <div className="flex-1 min-w-0">
-          <ProgressDots state={scene?.state || 'untouched'} />
+          <ProgressDots state={scene?.state || 'untouched'} projectId={projectId} sceneId={sceneId} />
         </div>
       </header>
 

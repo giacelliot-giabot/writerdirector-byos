@@ -196,6 +196,7 @@ export default function ProjectView() {
                   key={scene.id}
                   scene={scene}
                   index={index}
+                  projectId={projectId!}
                   onOpen={() => openScene(scene.id)}
                 />
               ))}
@@ -207,7 +208,7 @@ export default function ProjectView() {
   )
 }
 
-function SceneCard({ scene, index, onOpen }: { scene: Scene; index: number; onOpen: () => void }) {
+function SceneCard({ scene, index, projectId, onOpen }: { scene: Scene; index: number; projectId: string; onOpen: () => void }) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors">
       <div className="flex-1 min-w-0 space-y-3">
@@ -217,7 +218,7 @@ function SceneCard({ scene, index, onOpen }: { scene: Scene; index: number; onOp
             {scene.sceneHeader || <span className="text-zinc-500 italic font-normal">Untitled scene</span>}
           </h2>
         </div>
-        <ProgressDots state={scene.state} />
+        <ProgressDots state={scene.state} projectId={projectId} sceneId={scene.id} />
       </div>
       <button
         onClick={onOpen}

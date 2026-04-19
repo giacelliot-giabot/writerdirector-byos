@@ -6,6 +6,8 @@ import SignIn from './pages/SignIn'
 import Dashboard from './pages/Dashboard'
 import ProjectView from './pages/ProjectView'
 import SceneOutline from './pages/SceneOutline'
+import CommunityTheater from './pages/CommunityTheater'
+import LiarsPass from './pages/LiarsPass'
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -25,6 +27,8 @@ function AppRoutes() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/project/:projectId" element={<ProjectView />} />
       <Route path="/project/:projectId/scene/:sceneId" element={<SceneOutline />} />
+      <Route path="/project/:projectId/scene/:sceneId/community-theater" element={<CommunityTheater />} />
+      <Route path="/project/:projectId/scene/:sceneId/liars-pass" element={<LiarsPass />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
