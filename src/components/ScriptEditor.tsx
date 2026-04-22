@@ -75,9 +75,6 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
     historyInitializedRef.current = true
     historyRef.current = [blocks.map((b) => ({ ...b }))]
     historyIndexRef.current = 0
-    // #region agent log
-    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-A',location:'ScriptEditor.tsx:historyInit',message:'History initialized',data:{blockCount:blocks.length,index:historyIndexRef.current},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
   }, [blocks])
 
   function pushHistory(snapshot: ScriptElement[]) {
@@ -89,9 +86,6 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
     } else {
       historyIndexRef.current++
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-B',location:'ScriptEditor.tsx:pushHistory',message:'pushHistory called',data:{newIndex:historyIndexRef.current,historyLen:historyRef.current.length,snapshotBlockCount:snapshot.length},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
   }
 
   // Flush the pending text-change history entry immediately (before structural ops)
@@ -122,18 +116,12 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   }
 
   function undo(currentOnChange: (b: ScriptElement[]) => void) {
-    // #region agent log
-    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-C',location:'ScriptEditor.tsx:undo-entry',message:'undo called',data:{indexBeforeFlush:historyIndexRef.current,historyLen:historyRef.current.length,hasPendingTextSession:!!typingSessionStartRef.current},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (historyIndexRef.current <= 0) return
     // Flush any in-progress typing session first so we can undo to a clean checkpoint
     flushTextHistory()
     if (historyIndexRef.current <= 0) return
     historyIndexRef.current--
     const prev = historyRef.current[historyIndexRef.current]
-    // #region agent log
-    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-D-E',location:'ScriptEditor.tsx:undo-restore',message:'restoring state',data:{restoringToIndex:historyIndexRef.current,restoredBlockCount:prev.length,restoredBlockTypes:prev.map(b=>b.type)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     currentOnChange(prev.map((b) => ({ ...b })))
     // Focus last block after restoring
     if (prev.length > 0) focus(prev[prev.length - 1].id)
@@ -198,9 +186,6 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   }
 
   function remove(id: string) {
-    // #region agent log
-    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-B',location:'ScriptEditor.tsx:remove',message:'remove called',data:{removingId:id,currentBlockCount:blocks.length,currentIndexBeforePush:historyIndexRef.current},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     flushTextHistory()
     pushHistory(blocks)
     const idx = blocks.findIndex((b) => b.id === id)
