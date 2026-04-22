@@ -9,6 +9,7 @@ interface Slide {
   title: string
   subtitle?: string
   bullets: string[]
+  signoff?: string
   finishLabel?: string
 }
 
@@ -16,20 +17,19 @@ const slides: Slide[] = [
   {
     icon: <ClapperIcon />,
     title: 'writer/director',
-    subtitle: 'Your personal screenwriting tool.',
+    subtitle: 'a zero to first draft screenwriting tool for writer/directors by gia elliot',
     bullets: [
       'This is a space to outline your project and get a working first draft of all your scenes.',
-      'Each scene moves through three passes: an emotional outline, a Community Theater draft, and a Liars Pass.',
+      'Each scene is set up to go through 3 drafts to get you to a first pass.',
       'When you\'re ready, compile the whole script and export to Final Draft or PDF.',
+      'Saves automatically, open from any browser to access your projects.',
     ],
-    finishLabel: undefined,
   },
   {
     icon: <ListIcon />,
-    title: 'Your Scene Outline',
-    subtitle: 'Map out the shape of your script.',
+    title: 'Scenes Outline',
     bullets: [
-      'Create an outline of scenes for your project.',
+      'Start by creating an outline of all your scenes. If you use physical index cards, you can start there and then transcribe them here.',
       'Add descriptions of the plot and point of each scene.',
       'Drag scenes to reorder them seamlessly at any time.',
       'Filter by Character view to follow any character\'s arc across scenes.',
@@ -38,19 +38,18 @@ const slides: Slide[] = [
   {
     icon: <CirclePlayIcon />,
     title: 'Inside a Scene',
-    subtitle: 'Start with the emotional truth.',
     bullets: [
       'Click into any scene to open it.',
-      'Start with a character-by-character emotional outline.',
+      'Add the main characters in the scene.',
       'Customize each character\'s pill color to keep things visual.',
-      'Describe the internal emotional arc of each character, one at a time.',
+      'Get ready to outline the internal emotional arc of each character, one at a time.',
     ],
   },
   {
     icon: <HeartIcon />,
     title: 'The Emotional Outline',
-    subtitle: 'Eight fields. No shortcuts.',
     bullets: [
+      'Draft the inner emotional life that will give your scenes lift.',
       'Map what each character insanely wants — and what they actually get.',
       'Define the scene they think they\'re in, and the moment they realize they\'re wrong.',
       'Lay out the setting, the plot, and where the character lands.',
@@ -58,37 +57,15 @@ const slides: Slide[] = [
     ],
   },
   {
-    icon: <SpotlightIcon />,
-    title: 'Community Theater',
-    subtitle: 'Everyone says exactly what they mean.',
-    bullets: [
-      'Draft the first pass of your scene as if writing for community theater.',
-      'Have every character say exactly what they mean, out loud.',
-      'Reference the emotional outline by character on the left side of the screen.',
-      'It should be full of spit-takes — on the nose and a little funny. That\'s the point.',
-    ],
-  },
-  {
-    icon: <MaskIcon />,
-    title: 'Liar\'s Pass',
-    subtitle: 'Nobody says what they really mean.',
-    bullets: [
-      'Reference your Community Theater pass and emotional outline on the left.',
-      'Rewrite the scene so the characters never say exactly what they mean.',
-      'Bring them to life — marry the plot, dialogue, and emotional outline.',
-      'This is your real first draft.',
-    ],
-  },
-  {
     icon: <CheckIcon />,
-    title: 'You\'re all set.',
-    subtitle: 'Happy outlining → first draft.',
+    title: 'Compiling Your First Draft',
     bullets: [
       'Toggle back to your scene list at any time.',
       'Rearrange scenes freely — drag and drop whenever you\'re ready.',
       'Compile and export to Final Draft or PDF when you\'re ready to work on the script as a whole.',
     ],
-    finishLabel: 'Start Outlining',
+    signoff: 'I hope you enjoy going from outlining → first draft!\nLove,\nGia',
+    finishLabel: 'I\'m ready',
   },
 ]
 
@@ -166,6 +143,13 @@ export default function OnboardingTutorial({ onComplete }: Props) {
               </li>
             ))}
           </ul>
+
+          {/* Sign-off */}
+          {slide.signoff && (
+            <p className="mt-6 text-sm text-zinc-500 leading-relaxed whitespace-pre-line">
+              {slide.signoff}
+            </p>
+          )}
         </div>
 
         {/* Footer */}
@@ -258,26 +242,6 @@ function HeartIcon() {
   )
 }
 
-function SpotlightIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-      <path d="M2 17l10 5 10-5" />
-      <path d="M2 12l10 5 10-5" />
-    </svg>
-  )
-}
-
-function MaskIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7c0 0 1-1 3-1s4 2 6 2 4-2 6-2 3 1 3 1v8c0 0-1 2-3 2-1.5 0-3-1-5-1s-3.5 1-5 1c-2 0-3-2-3-2V7z" />
-      <path d="M9 12h.01" />
-      <path d="M15 12h.01" />
-      <path d="M9.5 15.5c.5.5 1.5 1 2.5 1s2-.5 2.5-1" />
-    </svg>
-  )
-}
 
 function CheckIcon() {
   return (

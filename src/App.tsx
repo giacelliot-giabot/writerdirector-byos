@@ -17,14 +17,8 @@ function AppRoutes() {
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
-    // #region agent log
-    console.warn('[dbg:aa554a][H-B][App.tsx:useEffect] fired', { userPresent: !!user, uid: user?.uid ?? null })
-    // #endregion
     if (!user) return
     getHasSeenOnboarding(user.uid).then((seen) => {
-      // #region agent log
-      console.warn('[dbg:aa554a][H-C/H-D][App.tsx:useEffect.then] seen resolved', { seen, willShowOnboarding: !seen })
-      // #endregion
       if (!seen) setShowOnboarding(true)
     })
   }, [user])
