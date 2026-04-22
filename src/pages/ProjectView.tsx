@@ -82,6 +82,22 @@ function SortableSceneRow({
   )
 }
 
+function getSceneCharacters(scene: Scene): string[] {
+  const fromOutline = (scene.outline?.characters ?? [])
+    .map((c) => c.name.trim())
+    .filter(Boolean)
+
+  const fromScript = [
+    ...(scene.communityTheater?.content ?? []),
+    ...(scene.liarsPass?.content ?? []),
+  ]
+    .filter((el) => el.type === 'character')
+    .map((el) => el.text.trim())
+    .filter(Boolean)
+
+  return Array.from(new Set([...fromOutline, ...fromScript]))
+}
+
 export default function ProjectView() {
   const { projectId } = useParams<{ projectId: string }>()
   const { user } = useAuth()
@@ -89,6 +105,7 @@ export default function ProjectView() {
   const [scenes, setScenes] = useState<Scene[]>([])
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null)
   const [showCompile, setShowCompile] = useState(false)
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -120,6 +137,15 @@ export default function ProjectView() {
     setScenes(reordered)
     await reorderScenes(user.uid, projectId, reordered)
   }
+
+  // All unique characters across all scenes, in order of first appearance
+  const allCharacters = Array.from(
+    new Set(scenes.flatMap(getSceneCharacters))
+  )
+
+  const filteredScenes = selectedCharacter
+    ? scenes.filter((s) => getSceneCharacters(s).includes(selectedCharacter))
+    : scenes
 
   function openScene(scene: Scene) {
     navigate(`/project/${projectId}/scene/${scene.id}`)
@@ -208,26 +234,65 @@ export default function ProjectView() {
               </button>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-4">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {/* Character filter strip */}
+              {allCharacters.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {allCharacters.map((name) => {
+                    const active = selectedCharacter === name
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => setSelectedCharacter(active ? null : name)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium tracking-wide transition-all ${
+                          active
+                            ? 'bg-zinc-100 text-zinc-900'
+                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                        }`}
+                      >
+                        {name}
+                      </button>
+                    )
+                  })}
+                  {selectedCharacter && (
+                    <button
+                      onClick={() => setSelectedCharacter(null)}
+                      className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors ml-1"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+              )}
+
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={scenes.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-                  {scenes.map((scene, index) => (
-                    <SortableSceneCard
-                      key={scene.id}
-                      scene={scene}
-                      index={index}
-                      projectId={projectId!}
-                      onOpen={() => openScene(scene)}
-                      onRename={(header) => handleRenameScene(scene.id, header)}
-                      onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
-                    />
-                  ))}
+                  <div className="space-y-4">
+                    {filteredScenes.map((scene, index) => (
+                      <SortableSceneCard
+                        key={scene.id}
+                        scene={scene}
+                        index={scenes.indexOf(scene)}
+                        projectId={projectId!}
+                        onOpen={() => openScene(scene)}
+                        onRename={(header) => handleRenameScene(scene.id, header)}
+                        onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
+                        highlightCharacter={selectedCharacter}
+                      />
+                    ))}
+                  </div>
                 </SortableContext>
               </DndContext>
+
+              {filteredScenes.length === 0 && selectedCharacter && (
+                <p className="text-zinc-600 text-sm text-center py-8">
+                  No scenes with <span className="text-zinc-400">{selectedCharacter}</span>.
+                </p>
+              )}
             </div>
           )}
         </main>
@@ -249,6 +314,7 @@ function SortableSceneCard(props: {
   onOpen: () => void
   onRename: (header: string) => void
   onDescriptionChange: (desc: string) => void
+  highlightCharacter?: string | null
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: props.scene.id })
@@ -273,6 +339,7 @@ function SceneCard({
   onRename,
   onDescriptionChange,
   dragHandleProps,
+  highlightCharacter,
 }: {
   scene: Scene
   index: number
@@ -281,11 +348,13 @@ function SceneCard({
   onRename: (header: string) => void
   onDescriptionChange: (desc: string) => void
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>
+  highlightCharacter?: string | null
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(scene.sceneHeader || '')
   const [description, setDescription] = useState(scene.outline?.settingPlot || '')
   const inputRef = useRef<HTMLInputElement>(null)
+  const characters = getSceneCharacters(scene)
 
   useEffect(() => {
     if (editing) inputRef.current?.focus()
@@ -314,9 +383,9 @@ function SceneCard({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors group/card">
-      <div className="flex-1 min-w-0 space-y-3">
-        <div className="flex items-center gap-3">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors group/card">
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex items-center gap-2">
           {/* Drag handle */}
           <span
             {...dragHandleProps}
@@ -325,7 +394,7 @@ function SceneCard({
           >
             ⠿
           </span>
-          <span className="text-zinc-600 text-sm font-mono shrink-0">{String(index + 1).padStart(2, '0')}</span>
+          <span className="text-zinc-600 text-xs font-mono shrink-0">{String(index + 1).padStart(2, '0')}</span>
           {editing ? (
             <input
               ref={inputRef}
@@ -362,7 +431,6 @@ function SceneCard({
           placeholder="What happens in this scene…"
           onChange={(e) => {
             setDescription(e.target.value)
-            // Auto-grow
             e.target.style.height = 'auto'
             e.target.style.height = `${e.target.scrollHeight}px`
           }}
@@ -376,11 +444,29 @@ function SceneCard({
           style={{ height: 'auto', minHeight: '1.5rem' }}
         />
 
-        <ProgressDots state={scene.state} projectId={projectId} sceneId={scene.id} />
+        {/* Characters + progress on one row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <ProgressDots state={scene.state} projectId={projectId} sceneId={scene.id} compact />
+          {characters.length > 0 && (
+            <span className="text-zinc-700 text-xs select-none">·</span>
+          )}
+          {characters.map((name) => (
+            <span
+              key={name}
+              className={`px-2 py-0.5 rounded-full text-xs font-medium tracking-wide ${
+                highlightCharacter === name
+                  ? 'bg-zinc-100 text-zinc-900'
+                  : 'bg-zinc-800 text-zinc-400'
+              }`}
+            >
+              {name}
+            </span>
+          ))}
+        </div>
       </div>
       <button
         onClick={onOpen}
-        className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium px-4 py-2 rounded-lg transition-colors mt-1"
+        className="shrink-0 text-zinc-500 hover:text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors mt-0.5"
       >
         Open →
       </button>

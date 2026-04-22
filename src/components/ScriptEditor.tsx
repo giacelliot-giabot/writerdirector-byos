@@ -61,6 +61,84 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   const [showQuickKeys, setShowQuickKeys] = useState(false)
   const rafId = useRef<number | null>(null)
 
+  // ── Undo history ──────────────────────────────────────────────────────────
+  const historyRef = useRef<ScriptElement[][]>([])
+  const historyIndexRef = useRef(-1)
+  const historyInitializedRef = useRef(false)
+  // Tracks the blocks state at the START of a typing session (before debounce fires)
+  const typingSessionStartRef = useRef<ScriptElement[] | null>(null)
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Seed history with the initial loaded blocks (once, when first non-empty)
+  useEffect(() => {
+    if (historyInitializedRef.current || blocks.length === 0) return
+    historyInitializedRef.current = true
+    historyRef.current = [blocks.map((b) => ({ ...b }))]
+    historyIndexRef.current = 0
+    // #region agent log
+    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-A',location:'ScriptEditor.tsx:historyInit',message:'History initialized',data:{blockCount:blocks.length,index:historyIndexRef.current},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [blocks])
+
+  function pushHistory(snapshot: ScriptElement[]) {
+    // Truncate any "future" states that existed before this new branch
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1)
+    historyRef.current.push(snapshot.map((b) => ({ ...b })))
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift()
+    } else {
+      historyIndexRef.current++
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-B',location:'ScriptEditor.tsx:pushHistory',message:'pushHistory called',data:{newIndex:historyIndexRef.current,historyLen:historyRef.current.length,snapshotBlockCount:snapshot.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }
+
+  // Flush the pending text-change history entry immediately (before structural ops)
+  function flushTextHistory() {
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current)
+      typingTimerRef.current = null
+    }
+    if (typingSessionStartRef.current) {
+      pushHistory(typingSessionStartRef.current)
+      typingSessionStartRef.current = null
+    }
+  }
+
+  // Schedule a history checkpoint after a pause in typing.
+  // `preChangeSnapshot` is the blocks state captured BEFORE the current change.
+  function scheduleTextHistory(preChangeSnapshot: ScriptElement[]) {
+    if (!typingSessionStartRef.current) {
+      typingSessionStartRef.current = preChangeSnapshot
+    }
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current)
+    typingTimerRef.current = setTimeout(() => {
+      if (typingSessionStartRef.current) {
+        pushHistory(typingSessionStartRef.current)
+        typingSessionStartRef.current = null
+      }
+    }, 1200)
+  }
+
+  function undo(currentOnChange: (b: ScriptElement[]) => void) {
+    // #region agent log
+    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-C',location:'ScriptEditor.tsx:undo-entry',message:'undo called',data:{indexBeforeFlush:historyIndexRef.current,historyLen:historyRef.current.length,hasPendingTextSession:!!typingSessionStartRef.current},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (historyIndexRef.current <= 0) return
+    // Flush any in-progress typing session first so we can undo to a clean checkpoint
+    flushTextHistory()
+    if (historyIndexRef.current <= 0) return
+    historyIndexRef.current--
+    const prev = historyRef.current[historyIndexRef.current]
+    // #region agent log
+    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-D-E',location:'ScriptEditor.tsx:undo-restore',message:'restoring state',data:{restoringToIndex:historyIndexRef.current,restoredBlockCount:prev.length,restoredBlockTypes:prev.map(b=>b.type)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    currentOnChange(prev.map((b) => ({ ...b })))
+    // Focus last block after restoring
+    if (prev.length > 0) focus(prev[prev.length - 1].id)
+  }
+
   // Cancel any pending programmatic focus the moment the user clicks anywhere.
   // This prevents Enter-triggered focus from stealing the click target.
   useEffect(() => {
@@ -104,6 +182,8 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   }
 
   function insertAfter(afterId: string, type: BlockType, text = ''): ScriptElement {
+    flushTextHistory()
+    pushHistory(blocks)
     const block: ScriptElement = { id: crypto.randomUUID(), type, text }
     const idx = blocks.findIndex((b) => b.id === afterId)
     const next = [...blocks]
@@ -118,6 +198,11 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   }
 
   function remove(id: string) {
+    // #region agent log
+    fetch('http://127.0.0.1:7674/ingest/146787e5-2f60-4a70-8c6f-78cec16a40cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c59418'},body:JSON.stringify({sessionId:'c59418',hypothesisId:'H-B',location:'ScriptEditor.tsx:remove',message:'remove called',data:{removingId:id,currentBlockCount:blocks.length,currentIndexBeforePush:historyIndexRef.current},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    flushTextHistory()
+    pushHistory(blocks)
     const idx = blocks.findIndex((b) => b.id === id)
     const next = blocks.filter((b) => b.id !== id)
     onChange(next)
@@ -126,11 +211,15 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
 
   const handleChange = useCallback(
     (block: ScriptElement, raw: string) => {
-      // ( at beginning of empty dialogue → parenthetical
+      // ( at beginning of empty dialogue → parenthetical (structural change)
       if (block.type === 'dialogue' && raw === '(') {
+        flushTextHistory()
+        pushHistory(blocks)
         update(block.id, { type: 'parenthetical', text: '' })
         return
       }
+      // Schedule a debounced history checkpoint for text edits
+      scheduleTextHistory(blocks)
       const text = applyAutoFormat(block.type, raw)
       update(block.id, { text })
     },
@@ -140,6 +229,13 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>, block: ScriptElement) => {
       const meta = e.metaKey || e.ctrlKey
+
+      // ── Undo ──────────────────────────────────────────────────────
+      if (meta && !e.shiftKey && e.key === 'z') {
+        e.preventDefault()
+        undo(onChange)
+        return
+      }
 
       // ── Global shortcuts ──────────────────────────────────────────
       // Cmd+Shift+S → new scene heading  (S = Slug/Scene)
@@ -159,11 +255,15 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
       if (e.key === 'Tab') {
         e.preventDefault()
         if (block.type === 'action') {
+          flushTextHistory()
+          pushHistory(blocks)
           update(block.id, { type: 'character', text: block.text.toUpperCase() })
         } else if (block.type === 'character') {
+          flushTextHistory()
+          pushHistory(blocks)
           update(block.id, { type: 'action', text: block.text })
         } else if (block.type === 'dialogue') {
-          // Tab in dialogue → new character cue
+          // Tab in dialogue → new character cue (insertAfter handles history)
           insertAfter(block.id, 'character')
         }
         return
@@ -194,7 +294,7 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
         }
       }
 
-      // ── Backspace on empty block → delete ─────────────────────────
+      // ── Backspace on empty block → delete (remove handles history) ─
       if (e.key === 'Backspace' && block.text === '') {
         e.preventDefault()
         remove(block.id)
@@ -290,6 +390,7 @@ const QUICK_KEYS = [
   {
     section: 'Quick Keys',
     keys: [
+      { keys: '⌘ Z', where: 'Anywhere', result: 'Undo last action (up to 50 steps)' },
       { keys: '⌘ Shift /', where: 'Anywhere', result: 'Open / close this panel' },
     ],
   },

@@ -300,9 +300,25 @@ export default function SceneOutline() {
             </div>
           </div>
 
-          {/* Right — character summary */}
-          <div className="flex-[2] overflow-y-auto px-6 py-8">
-            <CharacterSummary character={activeCharacter} settingPlot={settingPlot} />
+          {/* Right — other characters' summaries */}
+          <div className="flex-[2] overflow-y-auto px-6 py-8 space-y-8">
+            {characters.filter((c) => c.id !== activeCharacterId).length === 0 ? (
+              <div className="text-zinc-700 text-sm text-center pt-16">
+                Add another character to see their arc here.
+              </div>
+            ) : (
+              characters
+                .filter((c) => c.id !== activeCharacterId)
+                .map((c) => (
+                  <CharacterSummary key={c.id} character={c} settingPlot={settingPlot} showSettingPlot={false} />
+                ))
+            )}
+            {settingPlot && (
+              <div className="pt-4 border-t border-zinc-800 space-y-1">
+                <p className="text-zinc-600 text-xs font-medium uppercase tracking-wide">Setting / Plot</p>
+                <p className="text-zinc-400 text-sm leading-relaxed">{settingPlot}</p>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -349,15 +365,17 @@ function CharacterPill({
 function CharacterSummary({
   character,
   settingPlot,
+  showSettingPlot = true,
 }: {
   character: CharacterData
   settingPlot: string
+  showSettingPlot?: boolean
 }) {
   const hasAny = character.want || character.comingFrom || character.realization || character.needsToGetThrough || character.whereNow
 
   if (!hasAny) {
     return (
-      <div className="text-zinc-700 text-sm text-center pt-16">
+      <div className="text-zinc-700 text-sm">
         {character.name}'s arc will appear here as you write.
       </div>
     )
@@ -387,7 +405,7 @@ function CharacterSummary({
           <p className="text-zinc-200 text-sm leading-relaxed">{character.whereNow}</p>
         </div>
       )}
-      {settingPlot && (
+      {showSettingPlot && settingPlot && (
         <div className="pt-4 border-t border-zinc-800 space-y-1">
           <p className="text-zinc-600 text-xs font-medium uppercase tracking-wide">Setting / Plot</p>
           <p className="text-zinc-400 text-sm leading-relaxed">{settingPlot}</p>

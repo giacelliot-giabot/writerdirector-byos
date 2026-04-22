@@ -5,6 +5,7 @@ interface Props {
   state: SceneState
   projectId?: string
   sceneId?: string
+  compact?: boolean
 }
 
 const dots = [
@@ -53,13 +54,43 @@ const navigableStates: Record<number, SceneState[]> = {
   2: ['outline_complete', 'community_theater_in_progress', 'community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
 }
 
-export default function ProgressDots({ state, projectId, sceneId }: Props) {
+export default function ProgressDots({ state, projectId, sceneId, compact }: Props) {
   const navigate = useNavigate()
 
   function handleClick(i: number) {
     if (!projectId || !sceneId) return
     if (!navigableStates[i]?.includes(state)) return
     navigate(dots[i].path(projectId, sceneId))
+  }
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1.5">
+        {dots.map((dot, i) => {
+          const status = dotStatus(i, state)
+          const clickable = !!projectId && !!navigableStates[i]?.includes(state)
+          return (
+            <button
+              key={dot.label}
+              onClick={() => handleClick(i)}
+              disabled={!clickable}
+              title={dot.label}
+              className={clickable ? 'cursor-pointer' : 'cursor-default'}
+            >
+              <div
+                className={`w-2 h-2 rounded-full transition-all ${
+                  status === 'complete'
+                    ? 'bg-zinc-300'
+                    : status === 'active'
+                    ? 'bg-zinc-300 ring-2 ring-zinc-500 ring-offset-1 ring-offset-zinc-900'
+                    : 'bg-zinc-700'
+                }`}
+              />
+            </button>
+          )
+        })}
+      </div>
+    )
   }
 
   return (
