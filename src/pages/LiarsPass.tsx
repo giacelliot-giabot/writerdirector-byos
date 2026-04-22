@@ -5,11 +5,13 @@ import {
   subscribeToScenes,
   updateLiarsPassContent,
   updateSceneState,
+  saveSceneVersion,
   type Scene,
   type ScriptElement,
 } from '../lib/scenes'
 import ScriptEditor from '../components/ScriptEditor'
 import OutlineReference from '../components/OutlineReference'
+import VersionHistoryModal from '../components/VersionHistoryModal'
 import ProgressDots from '../components/ProgressDots'
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -27,8 +29,10 @@ export default function LiarsPass() {
   const navigate = useNavigate()
 
   const [scene, setScene] = useState<Scene | null>(null)
+  const [allScenes, setAllScenes] = useState<Scene[]>([])
   const [blocks, setBlocks] = useState<ScriptElement[]>([])
   const [panelOpen, setPanelOpen] = useState(true)
+  const [showHistory, setShowHistory] = useState(false)
   const initializedRef = useRef(false)
 
   const debouncedBlocks = useDebounce(blocks, 1000)
@@ -37,6 +41,7 @@ export default function LiarsPass() {
   useEffect(() => {
     if (!user || !projectId) return
     return subscribeToScenes(user.uid, projectId, (scenes) => {
+      setAllScenes(scenes)
       const found = scenes.find((s) => s.id === sceneId)
       if (!found) return
       setScene(found)
@@ -86,16 +91,39 @@ export default function LiarsPass() {
 
   async function markComplete() {
     if (!user || !projectId || !sceneId) return
+    await saveSceneVersion(user.uid, projectId, sceneId, 'liarsPass', blocks, 'Before completion')
     await updateLiarsPassContent(user.uid, projectId, sceneId, blocks, 'liars_pass_complete')
     await updateSceneState(user.uid, projectId, sceneId, 'liars_pass_complete')
     navigate(`/project/${projectId}`)
   }
+
+  // Project-wide character names for autocomplete (normalized to uppercase, deduped)
+  const knownCharacters = Array.from(new Set(
+    allScenes.flatMap((s) => {
+      const fromOutline = (s.outline?.characters ?? []).map((c) => c.name.trim().toUpperCase()).filter(Boolean)
+      const fromScript = [
+        ...(s.communityTheater?.content ?? []),
+        ...(s.liarsPass?.content ?? []),
+      ].filter((el) => el.type === 'character').map((el) => el.text.trim().toUpperCase()).filter(Boolean)
+      return [...fromOutline, ...fromScript]
+    })
+  ))
 
   const hasContent = blocks.some((b) => b.text.trim().length > 0)
   const ctBlocks = scene?.communityTheater?.content ?? []
 
   return (
     <div className="min-h-screen flex flex-col">
+      {showHistory && sceneId && projectId && (
+        <VersionHistoryModal
+          projectId={projectId}
+          sceneId={sceneId}
+          currentPass="liarsPass"
+          onRestore={(content) => { setBlocks(content); initializedRef.current = true }}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
       {/* Header */}
       <header className="border-b border-zinc-800 px-6 py-3 flex items-center gap-4">
         <Link to={`/project/${projectId}`} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors shrink-0">
@@ -160,12 +188,31 @@ export default function LiarsPass() {
 
           {/* Editor */}
           <div className="flex-1 overflow-y-auto px-8 py-8 lg:pl-32">
-            <ScriptEditor blocks={blocks} onChange={setBlocks} />
+            <ScriptEditor blocks={blocks} onChange={setBlocks} knownCharacters={knownCharacters} />
           </div>
 
           {/* Footer */}
           <div className="border-t border-zinc-800 px-8 py-3 flex items-center justify-between">
-            <span className="text-zinc-700 text-xs">Auto-saves as you write · Cmd+\ toggles reference</span>
+            <div className="flex items-center gap-4">
+              <span className="text-zinc-700 text-xs">Auto-saves · Cmd+\ toggles reference</span>
+              <button
+                onClick={() => setShowHistory(true)}
+                className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
+              >
+                Version history
+              </button>
+              {hasContent && (
+                <button
+                  onClick={async () => {
+                    if (!user || !projectId || !sceneId) return
+                    await saveSceneVersion(user.uid, projectId, sceneId, 'liarsPass', blocks, 'Manual checkpoint')
+                  }}
+                  className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
+                >
+                  Save checkpoint
+                </button>
+              )}
+            </div>
             {hasContent ? (
               <button
                 onClick={markComplete}

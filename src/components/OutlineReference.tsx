@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { SceneOutline, CharacterData } from '../lib/scenes'
+import { resolveCharColor } from '../lib/characterColors'
 
 interface Props {
   outline: SceneOutline
@@ -17,19 +18,20 @@ export default function OutlineReference({ outline }: Props) {
       {/* Character pills */}
       {outline?.characters?.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {outline.characters.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveId(c.id)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                c.id === activeId
-                  ? 'bg-zinc-600 text-zinc-100'
-                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
+          {outline.characters.map((c) => {
+            const color = resolveCharColor(c.color)
+            const style = c.id === activeId ? color.active : color.idle
+            return (
+              <button
+                key={c.id}
+                onClick={() => setActiveId(c.id)}
+                style={{ background: style.background, color: style.color }}
+                className="rounded-full px-3 py-1 text-xs font-medium transition-all"
+              >
+                {c.name}
+              </button>
+            )
+          })}
         </div>
       )}
 

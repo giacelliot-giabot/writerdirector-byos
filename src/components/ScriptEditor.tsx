@@ -54,9 +54,10 @@ interface Props {
   blocks: ScriptElement[]
   onChange: (blocks: ScriptElement[]) => void
   readOnly?: boolean
+  knownCharacters?: string[]
 }
 
-export default function ScriptEditor({ blocks, onChange, readOnly = false }: Props) {
+export default function ScriptEditor({ blocks, onChange, readOnly = false, knownCharacters = [] }: Props) {
   const refs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
   const [showQuickKeys, setShowQuickKeys] = useState(false)
   const rafId = useRef<number | null>(null)
@@ -316,6 +317,12 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false }: Pro
             }}
             onChange={(raw) => handleChange(block, raw)}
             onKeyDown={(e) => handleKeyDown(e, block)}
+            knownCharacters={block.type === 'character' ? knownCharacters : []}
+            onSelectSuggestion={(name) => {
+              flushTextHistory()
+              pushHistory(blocks)
+              onChange(blocks.map((b) => (b.id === block.id ? { ...b, text: name } : b)))
+            }}
           />
         ))}
       </div>
@@ -441,6 +448,8 @@ function BlockRow({
   refCallback,
   onChange,
   onKeyDown,
+  knownCharacters = [],
+  onSelectSuggestion,
 }: {
   block: ScriptElement
   label: string
@@ -448,7 +457,20 @@ function BlockRow({
   refCallback: (el: HTMLTextAreaElement | null) => void
   onChange: (raw: string) => void
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  knownCharacters?: string[]
+  onSelectSuggestion?: (name: string) => void
 }) {
+  const [focused, setFocused] = useState(false)
+
+  const suggestions =
+    focused && knownCharacters.length > 0
+      ? knownCharacters.filter(
+          (n) =>
+            n.toUpperCase() !== block.text.toUpperCase() &&
+            n.toUpperCase().startsWith(block.text.toUpperCase())
+        )
+      : []
+
   return (
     <div className="relative group w-full py-0.5">
       {/* Block type label */}
@@ -464,11 +486,32 @@ function BlockRow({
           onChange(e.target.value)
         }}
         onKeyDown={onKeyDown}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 120)}
         rows={1}
         spellCheck
         className={`${textareaClass} bg-transparent text-zinc-100 placeholder-zinc-700 outline-none resize-none overflow-hidden leading-relaxed py-0.5 border-b border-transparent focus:border-zinc-800 transition-colors`}
         style={{ minHeight: '1.6rem' }}
       />
+
+      {/* Character name autocomplete */}
+      {suggestions.length > 0 && (
+        <div className="absolute z-40 top-full left-[37%] mt-0.5 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden min-w-[140px]">
+          {suggestions.map((name) => (
+            <button
+              key={name}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onSelectSuggestion?.(name)
+                setFocused(false)
+              }}
+              className="block w-full text-left px-3 py-1.5 text-xs font-mono uppercase text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors"
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -10,6 +10,8 @@ import {
   serverTimestamp,
   writeBatch,
   Timestamp,
+  limit,
+  getDocs,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -25,6 +27,7 @@ export type SceneState =
 export interface CharacterData {
   id: string
   name: string
+  color?: string         // key from COLOR_PALETTE, undefined = monochrome default
   want: string           // Q1: what do they want/need from scene partner
   comingFrom: string     // Q2: where coming from, expectation, all 5 senses
   realization: string    // Q3: when do they realize they're not in the scene they thought
@@ -192,6 +195,54 @@ export async function reorderScenes(
     batch.update(sceneRef(userId, projectId, scene.id), { order: index })
   })
   await batch.commit()
+}
+
+// ─── Version history ───────────────────────────────────────────────────────
+
+export interface SceneVersion {
+  id: string
+  pass: 'communityTheater' | 'liarsPass'
+  content: ScriptElement[]
+  savedAt: Timestamp
+  label: string
+}
+
+function versionsRef(userId: string, projectId: string, sceneId: string) {
+  return collection(db, 'users', userId, 'projects', projectId, 'scenes', sceneId, 'versions')
+}
+
+export async function saveSceneVersion(
+  userId: string,
+  projectId: string,
+  sceneId: string,
+  pass: SceneVersion['pass'],
+  content: ScriptElement[],
+  label: string
+): Promise<void> {
+  if (!content.some((b) => b.text.trim())) return
+  await addDoc(versionsRef(userId, projectId, sceneId), {
+    pass,
+    content,
+    savedAt: serverTimestamp(),
+    label,
+  })
+  // Trim to keep only the 10 most recent per pass
+  const q = query(versionsRef(userId, projectId, sceneId), orderBy('savedAt', 'desc'))
+  const snap = await getDocs(q)
+  const toDelete = snap.docs.filter((d) => d.data().pass === pass).slice(10)
+  for (const d of toDelete) await deleteDoc(d.ref)
+}
+
+export function subscribeToSceneVersions(
+  userId: string,
+  projectId: string,
+  sceneId: string,
+  callback: (versions: SceneVersion[]) => void
+) {
+  const q = query(versionsRef(userId, projectId, sceneId), orderBy('savedAt', 'desc'), limit(20))
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as SceneVersion)))
+  })
 }
 
 export function characterIsComplete(c: CharacterData): boolean {

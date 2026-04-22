@@ -11,6 +11,7 @@ import {
   type Scene,
   type CharacterData,
 } from '../lib/scenes'
+import { resolveCharColor, COLOR_PALETTE, MONOCHROME } from '../lib/characterColors'
 import ProgressDots from '../components/ProgressDots'
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -127,7 +128,7 @@ export default function SceneOutline() {
   )
 
   function addCharacter() {
-    const name = newCharacterName.trim()
+    const name = newCharacterName.trim().toUpperCase()
     if (!name) return
     const newChar = emptyCharacter(name)
     setCharacters((prev) => [...prev, newChar])
@@ -197,6 +198,11 @@ export default function SceneOutline() {
             isActive={char.id === activeCharacterId}
             onSelect={() => setActiveCharacterId(char.id)}
             onRemove={() => removeCharacter(char.id)}
+            onColorChange={(colorKey) =>
+              setCharacters((prev) =>
+                prev.map((c) => (c.id === char.id ? { ...c, color: colorKey } : c))
+              )
+            }
           />
         ))}
 
@@ -331,34 +337,96 @@ function CharacterPill({
   isActive,
   onSelect,
   onRemove,
+  onColorChange,
 }: {
   character: CharacterData
   isActive: boolean
   onSelect: () => void
   onRemove: () => void
+  onColorChange: (colorKey: string | undefined) => void
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const color = resolveCharColor(character.color)
+  const style = isActive ? color.active : color.idle
+
   return (
-    <button
-      onClick={onSelect}
-      className={`group flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-        isActive
-          ? 'bg-zinc-100 text-zinc-900'
-          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-      }`}
-    >
-      {character.name}
-      <span
-        role="button"
-        onClick={(e) => { e.stopPropagation(); onRemove() }}
-        className={`text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center transition-colors ${
-          isActive
-            ? 'text-zinc-500 hover:text-zinc-900'
-            : 'text-zinc-600 hover:text-zinc-300'
-        }`}
+    <div className="relative">
+      <div
+        style={{ background: style.background, color: style.color }}
+        className="group flex items-center gap-1 rounded-full pl-2 pr-2 py-1 text-xs font-medium transition-all"
       >
-        ✕
-      </span>
-    </button>
+        {/* Color dot — opens picker */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setPickerOpen((o) => !o) }}
+          title="Pick color"
+          style={{ background: character.color ? COLOR_PALETTE.find(p => p.key === character.color)?.swatch : MONOCHROME.idle.color }}
+          className="w-2.5 h-2.5 rounded-full shrink-0 opacity-60 hover:opacity-100 transition-opacity ring-1 ring-black/20"
+        />
+
+        {/* Name — selects character */}
+        <button
+          onClick={onSelect}
+          className="px-1"
+        >
+          {character.name}
+        </button>
+
+        {/* Remove */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove() }}
+          style={{ color: style.color, opacity: 0.5 }}
+          className="text-[10px] w-3.5 h-3.5 flex items-center justify-center hover:opacity-100 transition-opacity"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Color picker popover */}
+      {pickerOpen && (
+        <div
+          className="absolute top-full left-0 mt-2 z-50 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4 min-w-max"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-3">Color</p>
+
+          <div className="flex items-center gap-2 mb-2">
+            {/* No color */}
+            <button
+              onClick={() => { onColorChange(undefined); setPickerOpen(false) }}
+              title="None"
+              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                !character.color ? 'border-white scale-110' : 'border-zinc-700 hover:border-zinc-500'
+              }`}
+              style={{ background: MONOCHROME.idle.background }}
+            >
+              <span style={{ color: MONOCHROME.idle.color }} className="text-[10px] font-bold leading-none select-none">—</span>
+            </button>
+
+            <div className="w-px h-6 bg-zinc-700 mx-1" />
+
+            {/* Color swatches — two rows of 6 */}
+            <div className="grid grid-cols-6 gap-2">
+              {COLOR_PALETTE.map((entry) => (
+                <button
+                  key={entry.key}
+                  onClick={() => { onColorChange(entry.key); setPickerOpen(false) }}
+                  title={entry.label}
+                  className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
+                    character.color === entry.key ? 'border-white scale-110' : 'border-transparent'
+                  }`}
+                  style={{ background: entry.swatch }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close picker on outside click */}
+      {pickerOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} />
+      )}
+    </div>
   )
 }
 

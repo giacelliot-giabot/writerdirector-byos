@@ -27,6 +27,7 @@ import {
   updateScenePlot,
   type Scene,
 } from '../lib/scenes'
+import { resolveCharColor } from '../lib/characterColors'
 import ProgressDots from '../components/ProgressDots'
 import CompileModal from '../components/CompileModal'
 
@@ -84,7 +85,7 @@ function SortableSceneRow({
 
 function getSceneCharacters(scene: Scene): string[] {
   const fromOutline = (scene.outline?.characters ?? [])
-    .map((c) => c.name.trim())
+    .map((c) => c.name.trim().toUpperCase())
     .filter(Boolean)
 
   const fromScript = [
@@ -92,7 +93,7 @@ function getSceneCharacters(scene: Scene): string[] {
     ...(scene.liarsPass?.content ?? []),
   ]
     .filter((el) => el.type === 'character')
-    .map((el) => el.text.trim())
+    .map((el) => el.text.trim().toUpperCase())
     .filter(Boolean)
 
   return Array.from(new Set([...fromOutline, ...fromScript]))
@@ -141,6 +142,11 @@ export default function ProjectView() {
   // All unique characters across all scenes, in order of first appearance
   const allCharacters = Array.from(
     new Set(scenes.flatMap(getSceneCharacters))
+  )
+
+  // name → stored color key, keyed by uppercase name for case-insensitive lookup
+  const charColorMap = new Map<string, string | undefined>(
+    scenes.flatMap((s) => (s.outline?.characters ?? []).map((c) => [c.name.trim().toUpperCase(), c.color]))
   )
 
   const filteredScenes = selectedCharacter
@@ -240,15 +246,14 @@ export default function ProjectView() {
                 <div className="flex flex-wrap items-center gap-2">
                   {allCharacters.map((name) => {
                     const active = selectedCharacter === name
+                    const color = resolveCharColor(charColorMap.get(name))
+                    const style = active ? color.active : color.idle
                     return (
                       <button
                         key={name}
                         onClick={() => setSelectedCharacter(active ? null : name)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium tracking-wide transition-all ${
-                          active
-                            ? 'bg-zinc-100 text-zinc-900'
-                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                        }`}
+                        style={{ background: style.background, color: style.color }}
+                        className="px-3 py-1 rounded-full text-xs font-medium tracking-wide transition-all"
                       >
                         {name}
                       </button>
@@ -272,7 +277,7 @@ export default function ProjectView() {
               >
                 <SortableContext items={scenes.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-4">
-                    {filteredScenes.map((scene, index) => (
+                    {filteredScenes.map((scene) => (
                       <SortableSceneCard
                         key={scene.id}
                         scene={scene}
@@ -282,6 +287,7 @@ export default function ProjectView() {
                         onRename={(header) => handleRenameScene(scene.id, header)}
                         onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
                         highlightCharacter={selectedCharacter}
+                        charColorMap={charColorMap}
                       />
                     ))}
                   </div>
@@ -315,6 +321,7 @@ function SortableSceneCard(props: {
   onRename: (header: string) => void
   onDescriptionChange: (desc: string) => void
   highlightCharacter?: string | null
+  charColorMap?: Map<string, string | undefined>
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: props.scene.id })
@@ -340,6 +347,7 @@ function SceneCard({
   onDescriptionChange,
   dragHandleProps,
   highlightCharacter,
+  charColorMap,
 }: {
   scene: Scene
   index: number
@@ -349,6 +357,7 @@ function SceneCard({
   onDescriptionChange: (desc: string) => void
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>
   highlightCharacter?: string | null
+  charColorMap?: Map<string, string | undefined>
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(scene.sceneHeader || '')
@@ -450,18 +459,19 @@ function SceneCard({
           {characters.length > 0 && (
             <span className="text-zinc-700 text-xs select-none">·</span>
           )}
-          {characters.map((name) => (
-            <span
-              key={name}
-              className={`px-2 py-0.5 rounded-full text-xs font-medium tracking-wide ${
-                highlightCharacter === name
-                  ? 'bg-zinc-100 text-zinc-900'
-                  : 'bg-zinc-800 text-zinc-400'
-              }`}
-            >
-              {name}
-            </span>
-          ))}
+          {characters.map((name) => {
+            const color = resolveCharColor(charColorMap?.get(name))
+            const style = highlightCharacter === name ? color.active : color.idle
+            return (
+              <span
+                key={name}
+                style={{ background: style.background, color: style.color }}
+                className="px-2 py-0.5 rounded-full text-xs font-medium tracking-wide"
+              >
+                {name}
+              </span>
+            )
+          })}
         </div>
       </div>
       <button
