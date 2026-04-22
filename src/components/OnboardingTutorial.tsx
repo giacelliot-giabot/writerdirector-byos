@@ -17,7 +17,7 @@ const slides: Slide[] = [
   {
     icon: <ClapperIcon />,
     title: 'writer/director',
-    subtitle: 'a zero to first draft screenwriting tool for writer/directors by gia elliot',
+    subtitle: 'a tool for writer/directors to go from idea to first draft\nby gia elliot',
     bullets: [
       'This is a space to outline your project and get a working first draft of all your scenes.',
       'Each scene is set up to go through 3 drafts to get you to a first pass.',
@@ -54,6 +54,28 @@ const slides: Slide[] = [
       'Define the scene they think they\'re in, and the moment they realize they\'re wrong.',
       'Lay out the setting, the plot, and where the character lands.',
       'When all fields are complete, the arrow unlocks your first pass.',
+    ],
+  },
+  {
+    icon: <SpotlightIcon />,
+    title: 'Community Theater',
+    subtitle: 'Everyone says exactly what they mean.',
+    bullets: [
+      'Draft the first pass of your scene as if writing for community theater.',
+      'Have every character say exactly what they mean, out loud.',
+      'Reference the emotional outline by character on the left side of the screen.',
+      'It should be full of spit-takes — on the nose and a little funny. That\'s the point.',
+    ],
+  },
+  {
+    icon: <MaskIcon />,
+    title: 'Liar\'s Pass',
+    subtitle: 'Nobody says what they really mean.',
+    bullets: [
+      'Reference your Community Theater pass and emotional outline on the left.',
+      'Rewrite the scene so the characters never say exactly what they mean.',
+      'Bring them to life — marry the plot, dialogue, and emotional outline.',
+      'This is your real first draft.',
     ],
   },
   {
@@ -131,7 +153,7 @@ export default function OnboardingTutorial({ onComplete }: Props) {
 
           {/* Subtitle */}
           {slide.subtitle && (
-            <p className="text-sm text-zinc-400 mb-5">{slide.subtitle}</p>
+            <p className="text-sm text-zinc-400 mb-5 whitespace-pre-line">{slide.subtitle}</p>
           )}
 
           {/* Bullets */}
@@ -242,6 +264,27 @@ function HeartIcon() {
   )
 }
 
+
+function SpotlightIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  )
+}
+
+function MaskIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7c0 0 1-1 3-1s4 2 6 2 4-2 6-2 3 1 3 1v8c0 0-1 2-3 2-1.5 0-3-1-5-1s-3.5 1-5 1c-2 0-3-2-3-2V7z" />
+      <path d="M9 12h.01" />
+      <path d="M15 12h.01" />
+      <path d="M9.5 15.5c.5.5 1.5 1 2.5 1s2-.5 2.5-1" />
+    </svg>
+  )
+}
 
 function CheckIcon() {
   return (
