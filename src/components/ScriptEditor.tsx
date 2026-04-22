@@ -55,9 +55,10 @@ interface Props {
   onChange: (blocks: ScriptElement[]) => void
   readOnly?: boolean
   knownCharacters?: string[]
+  onSave?: () => void
 }
 
-export default function ScriptEditor({ blocks, onChange, readOnly = false, knownCharacters = [] }: Props) {
+export default function ScriptEditor({ blocks, onChange, readOnly = false, knownCharacters = [], onSave }: Props) {
   const refs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
   const [showQuickKeys, setShowQuickKeys] = useState(false)
   const rafId = useRef<number | null>(null)
@@ -224,16 +225,22 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false, known
       }
 
       // ── Global shortcuts ──────────────────────────────────────────
-      // Cmd+Shift+S → new scene heading  (S = Slug/Scene)
-      if (meta && e.shiftKey && e.key === 'S') {
+      // Cmd+Shift+H → new scene heading  (H = Heading)
+      if (meta && e.shiftKey && e.key === 'H') {
         e.preventDefault()
         insertAfter(block.id, 'scene_heading')
         return
       }
-      // Cmd+Shift+E → new transition  (E = End/Exit scene)
-      if (meta && e.shiftKey && e.key === 'E') {
+      // Cmd+Shift+T → new transition  (T = Transition)
+      if (meta && e.shiftKey && e.key === 'T') {
         e.preventDefault()
         insertAfter(block.id, 'transition')
+        return
+      }
+      // Cmd+S → explicit save
+      if (meta && !e.shiftKey && e.key === 's') {
+        e.preventDefault()
+        onSave?.()
         return
       }
 
@@ -366,14 +373,15 @@ const QUICK_KEYS = [
   {
     section: 'Insert',
     keys: [
-      { keys: '⌘ Shift S', where: 'Anywhere', result: 'Insert scene heading after current block' },
-      { keys: '⌘ Shift E', where: 'Anywhere', result: 'Insert transition after current block' },
+      { keys: '⌘ Shift H', where: 'Anywhere', result: 'Insert scene heading after current block' },
+      { keys: '⌘ Shift T', where: 'Anywhere', result: 'Insert transition after current block' },
     ],
   },
   {
     section: 'Panels & Passes',
     keys: [
       { keys: '⌘ \\', where: 'Anywhere', result: 'Toggle outline / reference panel' },
+      { keys: '⌘ S', where: 'Anywhere', result: 'Save now' },
       { keys: '⌘ →', where: 'Community Theater', result: 'Advance to Liars Pass' },
       { keys: '⌘ ←', where: 'Community Theater', result: 'Back to Scenes' },
       { keys: '⌘ ←', where: 'Liars Pass', result: 'Back to Scenes' },

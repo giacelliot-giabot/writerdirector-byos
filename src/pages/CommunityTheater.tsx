@@ -64,9 +64,7 @@ export default function CommunityTheater() {
   // Debounced save
   useEffect(() => {
     if (!initializedRef.current || !user || !projectId || !sceneId) return
-    const hasContent = debouncedBlocks.some((b) => b.text.trim().length > 0)
-    const newState = hasContent ? 'community_theater_in_progress' : 'community_theater_in_progress'
-    updateCommunityTheaterContent(user.uid, projectId, sceneId, debouncedBlocks, newState)
+    updateCommunityTheaterContent(user.uid, projectId, sceneId, debouncedBlocks, 'community_theater_in_progress')
   }, [debouncedBlocks, user, projectId, sceneId])
 
   // 30-second interval save
@@ -172,7 +170,12 @@ export default function CommunityTheater() {
 
           {/* Editor */}
           <div className="flex-1 overflow-y-auto px-8 py-8 relative lg:pl-32">
-            <ScriptEditor blocks={blocks} onChange={setBlocks} knownCharacters={knownCharacters} />
+            <ScriptEditor
+              blocks={blocks}
+              onChange={setBlocks}
+              knownCharacters={knownCharacters}
+              onSave={() => updateCommunityTheaterContent(user!.uid, projectId!, sceneId!, blocks, 'community_theater_in_progress')}
+            />
           </div>
 
           {/* Footer */}

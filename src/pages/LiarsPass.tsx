@@ -188,7 +188,12 @@ export default function LiarsPass() {
 
           {/* Editor */}
           <div className="flex-1 overflow-y-auto px-8 py-8 lg:pl-32">
-            <ScriptEditor blocks={blocks} onChange={setBlocks} knownCharacters={knownCharacters} />
+            <ScriptEditor
+              blocks={blocks}
+              onChange={setBlocks}
+              knownCharacters={knownCharacters}
+              onSave={() => updateLiarsPassContent(user!.uid, projectId!, sceneId!, blocks)}
+            />
           </div>
 
           {/* Footer */}
