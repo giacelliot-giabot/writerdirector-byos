@@ -1,16 +1,38 @@
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
+import OnboardingTutorial from './components/OnboardingTutorial'
 import SignIn from './pages/SignIn'
 import Dashboard from './pages/Dashboard'
 import ProjectView from './pages/ProjectView'
 import SceneOutline from './pages/SceneOutline'
 import CommunityTheater from './pages/CommunityTheater'
 import LiarsPass from './pages/LiarsPass'
+import { getHasSeenOnboarding, setHasSeenOnboarding } from './lib/users'
 
 function AppRoutes() {
   const { user, loading } = useAuth()
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    // #region agent log
+    console.warn('[dbg:aa554a][H-B][App.tsx:useEffect] fired', { userPresent: !!user, uid: user?.uid ?? null })
+    // #endregion
+    if (!user) return
+    getHasSeenOnboarding(user.uid).then((seen) => {
+      // #region agent log
+      console.warn('[dbg:aa554a][H-C/H-D][App.tsx:useEffect.then] seen resolved', { seen, willShowOnboarding: !seen })
+      // #endregion
+      if (!seen) setShowOnboarding(true)
+    })
+  }, [user])
+
+  async function handleOnboardingComplete() {
+    setShowOnboarding(false)
+    if (user) await setHasSeenOnboarding(user.uid)
+  }
 
   if (loading) {
     return (
@@ -23,14 +45,17 @@ function AppRoutes() {
   if (!user) return <SignIn />
 
   return (
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/project/:projectId" element={<ProjectView />} />
-      <Route path="/project/:projectId/scene/:sceneId" element={<SceneOutline />} />
-      <Route path="/project/:projectId/scene/:sceneId/community-theater" element={<CommunityTheater />} />
-      <Route path="/project/:projectId/scene/:sceneId/liars-pass" element={<LiarsPass />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/project/:projectId" element={<ProjectView />} />
+        <Route path="/project/:projectId/scene/:sceneId" element={<SceneOutline />} />
+        <Route path="/project/:projectId/scene/:sceneId/community-theater" element={<CommunityTheater />} />
+        <Route path="/project/:projectId/scene/:sceneId/liars-pass" element={<LiarsPass />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {showOnboarding && <OnboardingTutorial onComplete={handleOnboardingComplete} />}
+    </>
   )
 }
 
