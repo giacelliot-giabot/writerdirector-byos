@@ -48,6 +48,10 @@ export default function LiarsPass() {
             ? content
             : [{ id: crypto.randomUUID(), type: 'scene_heading' as const, text: '' }]
         )
+        // Advance state to LP regardless of how the user got here
+        if (!['liars_pass_in_progress', 'liars_pass_complete'].includes(found.state)) {
+          updateSceneState(user.uid, projectId!, sceneId!, 'liars_pass_in_progress')
+        }
       }
     })
   }, [user, projectId, sceneId])

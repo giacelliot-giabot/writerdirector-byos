@@ -43,12 +43,15 @@ export default function CommunityTheater() {
       if (!initializedRef.current) {
         initializedRef.current = true
         const content = found.communityTheater?.content ?? []
-        // Always start with at least one action block so there's something to type in
         setBlocks(
           content.length > 0
             ? content
             : [{ id: crypto.randomUUID(), type: 'scene_heading' as const, text: '' }]
         )
+        // Ensure state advances to CT regardless of how the user got here
+        if (['untouched', 'outline_in_progress', 'outline_complete'].includes(found.state)) {
+          updateSceneState(user.uid, projectId!, sceneId!, 'community_theater_in_progress')
+        }
       }
     })
   }, [user, projectId, sceneId])

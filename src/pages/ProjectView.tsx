@@ -24,6 +24,7 @@ import {
   deleteScene,
   reorderScenes,
   updateSceneHeader,
+  updateScenePlot,
   type Scene,
 } from '../lib/scenes'
 import ProgressDots from '../components/ProgressDots'
@@ -120,13 +121,18 @@ export default function ProjectView() {
     await reorderScenes(user.uid, projectId, reordered)
   }
 
-  function openScene(sceneId: string) {
-    navigate(`/project/${projectId}/scene/${sceneId}`)
+  function openScene(scene: Scene) {
+    navigate(`/project/${projectId}/scene/${scene.id}`)
   }
 
   async function handleRenameScene(sceneId: string, header: string) {
     if (!user || !projectId) return
     await updateSceneHeader(user.uid, projectId, sceneId, header.toUpperCase())
+  }
+
+  async function handleDescriptionChange(sceneId: string, description: string) {
+    if (!user || !projectId) return
+    await updateScenePlot(user.uid, projectId, sceneId, description)
   }
 
   return (
@@ -174,7 +180,7 @@ export default function ProjectView() {
                     scene={scene}
                     index={index}
                     isActive={scene.id === activeSceneId}
-                    onSelect={() => setActiveSceneId(scene.id)}
+                    onSelect={() => openScene(scene)}
                     onDelete={() => handleDeleteScene(scene.id)}
                   />
                 ))}
@@ -203,16 +209,25 @@ export default function ProjectView() {
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-4">
-              {scenes.map((scene, index) => (
-                <SceneCard
-                  key={scene.id}
-                  scene={scene}
-                  index={index}
-                  projectId={projectId!}
-                  onOpen={() => openScene(scene.id)}
-                  onRename={(header) => handleRenameScene(scene.id, header)}
-                />
-              ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={scenes.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                  {scenes.map((scene, index) => (
+                    <SortableSceneCard
+                      key={scene.id}
+                      scene={scene}
+                      index={index}
+                      projectId={projectId!}
+                      onOpen={() => openScene(scene)}
+                      onRename={(header) => handleRenameScene(scene.id, header)}
+                      onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           )}
         </main>
@@ -227,31 +242,64 @@ export default function ProjectView() {
   )
 }
 
+function SortableSceneCard(props: {
+  scene: Scene
+  index: number
+  projectId: string
+  onOpen: () => void
+  onRename: (header: string) => void
+  onDescriptionChange: (desc: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: props.scene.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className={isDragging ? 'opacity-50' : ''}>
+      <SceneCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  )
+}
+
 function SceneCard({
   scene,
   index,
   projectId,
   onOpen,
   onRename,
+  onDescriptionChange,
+  dragHandleProps,
 }: {
   scene: Scene
   index: number
   projectId: string
   onOpen: () => void
   onRename: (header: string) => void
+  onDescriptionChange: (desc: string) => void
+  dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(scene.sceneHeader || '')
+  const [description, setDescription] = useState(scene.outline?.settingPlot || '')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (editing) inputRef.current?.focus()
   }, [editing])
 
-  // Keep draft in sync if scene updates externally while not editing
   useEffect(() => {
     if (!editing) setDraft(scene.sceneHeader || '')
   }, [scene.sceneHeader, editing])
+
+  // Sync description from external updates only if not currently focused
+  const descFocused = useRef(false)
+  useEffect(() => {
+    if (!descFocused.current) setDescription(scene.outline?.settingPlot || '')
+  }, [scene.outline?.settingPlot])
 
   function commit() {
     const value = draft.trim().toUpperCase()
@@ -260,10 +308,23 @@ function SceneCard({
     onRename(value)
   }
 
+  function commitDescription() {
+    descFocused.current = false
+    onDescriptionChange(description)
+  }
+
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors group/card">
       <div className="flex-1 min-w-0 space-y-3">
         <div className="flex items-center gap-3">
+          {/* Drag handle */}
+          <span
+            {...dragHandleProps}
+            className="text-zinc-700 hover:text-zinc-500 cursor-grab active:cursor-grabbing text-sm select-none shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
+            title="Drag to reorder"
+          >
+            ⠿
+          </span>
           <span className="text-zinc-600 text-sm font-mono shrink-0">{String(index + 1).padStart(2, '0')}</span>
           {editing ? (
             <input
@@ -293,11 +354,33 @@ function SceneCard({
             </button>
           )}
         </div>
+
+        {/* Description / Setting / Plot */}
+        <textarea
+          value={description}
+          rows={1}
+          placeholder="What happens in this scene…"
+          onChange={(e) => {
+            setDescription(e.target.value)
+            // Auto-grow
+            e.target.style.height = 'auto'
+            e.target.style.height = `${e.target.scrollHeight}px`
+          }}
+          onFocus={(e) => {
+            descFocused.current = true
+            e.target.style.height = 'auto'
+            e.target.style.height = `${e.target.scrollHeight}px`
+          }}
+          onBlur={commitDescription}
+          className="w-full bg-transparent text-zinc-400 placeholder-zinc-700 text-sm leading-relaxed outline-none resize-none overflow-hidden transition-colors focus:text-zinc-200"
+          style={{ height: 'auto', minHeight: '1.5rem' }}
+        />
+
         <ProgressDots state={scene.state} projectId={projectId} sceneId={scene.id} />
       </div>
       <button
         onClick={onOpen}
-        className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+        className="shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium px-4 py-2 rounded-lg transition-colors mt-1"
       >
         Open →
       </button>

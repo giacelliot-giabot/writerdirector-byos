@@ -44,12 +44,13 @@ function dotStatus(index: number, state: SceneState): 'empty' | 'active' | 'comp
   return 'empty'
 }
 
-// A dot is navigable if it's been reached OR the previous step is complete
-// (so you can advance to CT once outline is done, LP once CT is done)
+// A dot is navigable if it's been reached OR the previous step is complete.
+// outline_complete is included for LP so that clicking LP from CT works even
+// during the brief window before the state update propagates from Firestore.
 const navigableStates: Record<number, SceneState[]> = {
   0: ['outline_in_progress', 'outline_complete', 'community_theater_in_progress', 'community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
   1: ['outline_complete', 'community_theater_in_progress', 'community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
-  2: ['community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
+  2: ['outline_complete', 'community_theater_in_progress', 'community_theater_complete', 'liars_pass_in_progress', 'liars_pass_complete'],
 }
 
 export default function ProgressDots({ state, projectId, sceneId }: Props) {

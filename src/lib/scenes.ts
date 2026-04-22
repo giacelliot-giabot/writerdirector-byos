@@ -140,6 +140,15 @@ export async function updateSceneOutline(
   await updateDoc(sceneRef(userId, projectId, sceneId), update)
 }
 
+export async function updateScenePlot(
+  userId: string,
+  projectId: string,
+  sceneId: string,
+  settingPlot: string
+) {
+  await updateDoc(sceneRef(userId, projectId, sceneId), { 'outline.settingPlot': settingPlot })
+}
+
 export async function updateSceneState(
   userId: string,
   projectId: string,
