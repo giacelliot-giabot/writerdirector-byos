@@ -81,6 +81,22 @@ export function emptyCharacter(name = ''): CharacterData {
   }
 }
 
+const t = (v: string | undefined) => (v ?? '').trim()
+
+/** Fills missing string fields for legacy Firestore character rows. */
+export function normalizeCharacterData(c: CharacterData): CharacterData {
+  return {
+    ...c,
+    comingFrom: c.comingFrom ?? '',
+    sceneTheyreEntering: c.sceneTheyreEntering ?? '',
+    want: c.want ?? '',
+    realization: c.realization ?? '',
+    needsToGetThrough: c.needsToGetThrough ?? '',
+    tactics: c.tactics ?? '',
+    whereNow: c.whereNow ?? '',
+  }
+}
+
 const emptyOutline = (): SceneOutline => ({
   characters: [],
   settingPlot: '',
@@ -251,14 +267,14 @@ export function subscribeToSceneVersions(
 
 export function characterIsComplete(c: CharacterData): boolean {
   return (
-    c.name.trim().length > 0 &&
-    c.comingFrom.trim().length > 0 &&
-    c.sceneTheyreEntering.trim().length > 0 &&
-    c.want.trim().length > 0 &&
-    c.realization.trim().length > 0 &&
-    c.needsToGetThrough.trim().length > 0 &&
-    c.tactics.trim().length > 0 &&
-    c.whereNow.trim().length > 0
+    t(c.name).length > 0 &&
+    t(c.comingFrom).length > 0 &&
+    t(c.sceneTheyreEntering).length > 0 &&
+    t(c.want).length > 0 &&
+    t(c.realization).length > 0 &&
+    t(c.needsToGetThrough).length > 0 &&
+    t(c.tactics).length > 0 &&
+    t(c.whereNow).length > 0
   )
 }
 
@@ -266,6 +282,6 @@ export function outlineIsComplete(outline: SceneOutline): boolean {
   return (
     outline.characters.length > 0 &&
     outline.characters.every(characterIsComplete) &&
-    outline.settingPlot.trim().length > 0
+    t(outline.settingPlot).length > 0
   )
 }

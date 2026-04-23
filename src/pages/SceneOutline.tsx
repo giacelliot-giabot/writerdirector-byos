@@ -8,6 +8,7 @@ import {
   updateSceneState,
   outlineIsComplete,
   emptyCharacter,
+  normalizeCharacterData,
   type Scene,
   type CharacterData,
 } from '../lib/scenes'
@@ -77,10 +78,25 @@ export default function SceneOutline() {
   const [initialized, setInitialized] = useState(false)
 
   const addInputRef = useRef<HTMLInputElement>(null)
+  const isFirstSceneId = useRef(true)
 
   const debouncedHeader = useDebounce(headerValue, 600)
   const debouncedCharacters = useDebounce(characters, 800)
   const debouncedSettingPlot = useDebounce(settingPlot, 800)
+
+  // When navigating between scenes without a remount, reset so the first Firestore snapshot can hydrate again.
+  useEffect(() => {
+    if (isFirstSceneId.current) {
+      isFirstSceneId.current = false
+      return
+    }
+    setInitialized(false)
+    setHeaderValue('')
+    setCharacters([])
+    setSettingPlot('')
+    setActiveCharacterId(null)
+    setScene(null)
+  }, [sceneId])
 
   // Load from Firestore
   useEffect(() => {
@@ -89,16 +105,31 @@ export default function SceneOutline() {
       const found = scenes.find((s) => s.id === sceneId)
       if (!found) return
       setScene(found)
+      const chars = found.outline?.characters || []
+
       if (!initialized) {
         setHeaderValue(found.sceneHeader || '')
-        const chars = found.outline?.characters || []
-        setCharacters(chars)
+        setCharacters(chars.map(normalizeCharacterData))
         setSettingPlot(found.outline?.settingPlot || '')
         if (chars.length > 0) setActiveCharacterId(chars[0].id)
         setInitialized(true)
+      } else if (chars.length > 0 && characters.length === 0) {
+        // First snapshot was empty; a later snapshot has outline — without this we never apply it.
+        setHeaderValue(found.sceneHeader || '')
+        setCharacters(chars.map(normalizeCharacterData))
+        setSettingPlot(found.outline?.settingPlot || '')
+        setActiveCharacterId(chars[0].id)
       }
     })
+    // characters intentionally not in deps: used only for late-merge guard (empty local vs server delay); re-subscribing on every character edit would churn the listener.
   }, [user, projectId, sceneId, initialized])
+
+  // If the selected character id is missing from the list, snap to the first (avoids null body render).
+  useEffect(() => {
+    if (characters.length === 0) return
+    const has = activeCharacterId && characters.some((c) => c.id === activeCharacterId)
+    if (!has) setActiveCharacterId(characters[0].id)
+  }, [characters, activeCharacterId])
 
   // Focus add input
   useEffect(() => {
@@ -274,7 +305,7 @@ export default function SceneOutline() {
                   {q.label}
                 </label>
                 <textarea
-                  value={activeCharacter[q.key]}
+                  value={activeCharacter[q.key] ?? ''}
                   onChange={(e) => updateCharacterField(activeCharacter.id, q.key, e.target.value)}
                   placeholder={q.prompt}
                   rows={3}
