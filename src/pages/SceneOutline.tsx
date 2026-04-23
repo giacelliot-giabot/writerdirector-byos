@@ -25,24 +25,34 @@ function useDebounce<T>(value: T, delay: number): T {
 
 const CHARACTER_QUESTIONS: { key: keyof Omit<CharacterData, 'id' | 'name'>; label: string; prompt: string; distinct?: boolean }[] = [
   {
-    key: 'want',
-    label: 'What do they want?',
-    prompt: 'What do they want or need from their scene partner more than anything?',
-  },
-  {
     key: 'comingFrom',
     label: 'Where are they coming from?',
-    prompt: 'What\'s their expectation? What scene do they think they\'re entering — describe all 5 senses.',
+    prompt: 'Where exactly is this character coming from?',
+  },
+  {
+    key: 'sceneTheyreEntering',
+    label: 'What scene do they think they\'re entering?',
+    prompt: 'What do they expect is going to happen in this scene? Describe all five senses of what they anticipate to — see, hear, feel, touch, taste.',
+  },
+  {
+    key: 'want',
+    label: 'What are their biggest hopes and dreams for the scene?',
+    prompt: 'What\'s the biggest, swing-for-the-fences, thing they want from their scene partner when they enter the scene (so big it might not even be conscious to your character)?',
   },
   {
     key: 'realization',
-    label: 'The moment of realization',
-    prompt: 'At what point do they realize they\'re not in the scene they thought they were?',
+    label: 'When do they realize they\'re in a much different scene?',
+    prompt: 'Describe exactly when it\'s clear to them that they\'re in a very different reality. How did they realize? And what circumstance are they actually in?',
   },
   {
     key: 'needsToGetThrough',
-    label: 'What do they need to get through?',
-    prompt: 'What do they need from their scene partner to get through to the end of the scene?',
+    label: 'What do they need their scene partner to do or say to make it to the end of the scene?',
+    prompt: 'In this very new reality, what could their scene partner do or say to resolve this scene for them?',
+  },
+  {
+    key: 'tactics',
+    label: 'What things might they try to get that?',
+    prompt: 'What types of tactics might your character employ to get their scene partner to do/say what they need them to do/say?',
   },
   {
     key: 'whereNow',
@@ -439,7 +449,7 @@ function CharacterSummary({
   settingPlot: string
   showSettingPlot?: boolean
 }) {
-  const hasAny = character.want || character.comingFrom || character.realization || character.needsToGetThrough || character.whereNow
+  const hasAny = character.comingFrom || character.sceneTheyreEntering || character.want || character.realization || character.needsToGetThrough || character.tactics || character.whereNow
 
   if (!hasAny) {
     return (
@@ -455,17 +465,23 @@ function CharacterSummary({
         {character.name}
       </p>
 
-      {character.want && (
-        <SummaryRow label="Wants" content={character.want} />
-      )}
       {character.comingFrom && (
         <SummaryRow label="Coming from" content={character.comingFrom} />
       )}
+      {character.sceneTheyreEntering && (
+        <SummaryRow label="Scene they think they're entering" content={character.sceneTheyreEntering} />
+      )}
+      {character.want && (
+        <SummaryRow label="Biggest hopes & dreams" content={character.want} />
+      )}
       {character.realization && (
-        <SummaryRow label="Realizes" content={character.realization} />
+        <SummaryRow label="When they realize" content={character.realization} />
       )}
       {character.needsToGetThrough && (
-        <SummaryRow label="Needs to get through" content={character.needsToGetThrough} />
+        <SummaryRow label="Needs scene partner to" content={character.needsToGetThrough} />
+      )}
+      {character.tactics && (
+        <SummaryRow label="Tactics" content={character.tactics} />
       )}
       {character.whereNow && (
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 space-y-1">

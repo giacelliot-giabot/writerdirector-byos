@@ -17,7 +17,7 @@ const slides: Slide[] = [
   {
     icon: <ClapperIcon />,
     title: 'writer/director',
-    subtitle: 'a tool for writer/directors to go from idea to first draft\nby gia elliot',
+    subtitle: 'I built this tool as a place for writer/directors to go from an idea to a first draft. Hope you enjoy!\nxo, gia elliot',
     bullets: [
       'This is a space to outline your project and get a working first draft of all your scenes.',
       'Each scene is set up to go through 3 drafts to get you to a first pass.',
@@ -27,7 +27,7 @@ const slides: Slide[] = [
   },
   {
     icon: <ListIcon />,
-    title: 'Scenes Outline',
+    title: 'Create an Outline of Scenes',
     bullets: [
       'Start by creating an outline of all your scenes. If you use physical index cards, you can start there and then transcribe them here.',
       'Add descriptions of the plot and point of each scene.',
@@ -37,50 +37,49 @@ const slides: Slide[] = [
   },
   {
     icon: <CirclePlayIcon />,
-    title: 'Inside a Scene',
+    title: 'Build out the details of each scene',
     bullets: [
-      'Click into any scene to open it.',
-      'Add the main characters in the scene.',
+      'Click into any scene to open it and start to flesh out the scene details.',
+      'Add tabs for each of your main characters.',
       'Customize each character\'s pill color to keep things visual.',
       'Get ready to outline the internal emotional arc of each character, one at a time.',
     ],
   },
   {
     icon: <HeartIcon />,
-    title: 'The Emotional Outline',
+    title: 'Articulate your emotional outline',
+    subtitle: 'The first thing you\'re going to do, is draft the inner emotional life that will give your scenes lift.',
     bullets: [
-      'Draft the inner emotional life that will give your scenes lift.',
-      'Map what each character insanely wants — and what they actually get.',
-      'Define the scene they think they\'re in, and the moment they realize they\'re wrong.',
-      'Lay out the setting, the plot, and where the character lands.',
+      'Spell out your ideas around what each character insanely wants — and what they actually get. The scene they think they\'re in, and the moment they realize they\'re wrong.',
+      'Lay out the setting, the plot, and where the character is at the end of the scene.',
       'When all fields are complete, the arrow unlocks your first pass.',
     ],
   },
   {
     icon: <SpotlightIcon />,
-    title: 'Community Theater',
-    subtitle: 'Everyone says exactly what they mean.',
+    title: 'Draft each scene for Community Theater',
+    subtitle: 'Start your first draft with the most on-the-nose possible take of your scene, write as if it\'ll be performed by a Community Theater.',
     bullets: [
-      'Draft the first pass of your scene as if writing for community theater.',
+      'Use your emotional outline that will show up on the left side of the screen to write a straightforward draft of your scene.',
       'Have every character say exactly what they mean, out loud.',
-      'Reference the emotional outline by character on the left side of the screen.',
-      'It should be full of spit-takes — on the nose and a little funny. That\'s the point.',
+      'It should be full of spit-takes — on the nose and a little funny.',
+      'Once you have a 100% transparent version of the scene, move on!',
     ],
   },
   {
     icon: <MaskIcon />,
-    title: 'Liar\'s Pass',
-    subtitle: 'Nobody says what they really mean.',
+    title: 'Rewrite it as a Liar\'s Pass',
+    subtitle: 'In this pass your goal is to move your existing text to subtext and write how people actually speak.',
     bullets: [
       'Reference your Community Theater pass and emotional outline on the left.',
       'Rewrite the scene so the characters never say exactly what they mean.',
-      'Bring them to life — marry the plot, dialogue, and emotional outline.',
+      'Bring them to life! Focus on subtlety, realism, and making the plot work.',
       'This is your real first draft.',
     ],
   },
   {
     icon: <CheckIcon />,
-    title: 'Compiling Your First Draft',
+    title: 'Compile Your First Draft',
     bullets: [
       'Toggle back to your scene list at any time.',
       'Rearrange scenes freely — drag and drop whenever you\'re ready.',

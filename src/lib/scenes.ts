@@ -27,12 +27,14 @@ export type SceneState =
 export interface CharacterData {
   id: string
   name: string
-  color?: string         // key from COLOR_PALETTE, undefined = monochrome default
-  want: string           // Q1: what do they want/need from scene partner
-  comingFrom: string     // Q2: where coming from, expectation, all 5 senses
-  realization: string    // Q3: when do they realize they're not in the scene they thought
-  needsToGetThrough: string  // Q4: what do they need from scene partner to get through
-  whereNow: string       // Q5: where is the character now
+  color?: string               // key from COLOR_PALETTE, undefined = monochrome default
+  comingFrom: string           // Q1: where are they coming from
+  sceneTheyreEntering: string  // Q2: what scene do they think they're entering
+  want: string                 // Q3: biggest hopes/dreams — what they want from scene partner
+  realization: string          // Q4: when do they realize they're in a much different scene
+  needsToGetThrough: string    // Q5: what do they need scene partner to do/say
+  tactics: string              // Q6: what tactics might they try
+  whereNow: string             // Q7: where is this character now (distinct styling)
 }
 
 export interface SceneOutline {
@@ -69,10 +71,12 @@ export function emptyCharacter(name = ''): CharacterData {
   return {
     id: crypto.randomUUID(),
     name,
-    want: '',
     comingFrom: '',
+    sceneTheyreEntering: '',
+    want: '',
     realization: '',
     needsToGetThrough: '',
+    tactics: '',
     whereNow: '',
   }
 }
@@ -248,10 +252,12 @@ export function subscribeToSceneVersions(
 export function characterIsComplete(c: CharacterData): boolean {
   return (
     c.name.trim().length > 0 &&
-    c.want.trim().length > 0 &&
     c.comingFrom.trim().length > 0 &&
+    c.sceneTheyreEntering.trim().length > 0 &&
+    c.want.trim().length > 0 &&
     c.realization.trim().length > 0 &&
     c.needsToGetThrough.trim().length > 0 &&
+    c.tactics.trim().length > 0 &&
     c.whereNow.trim().length > 0
   )
 }
