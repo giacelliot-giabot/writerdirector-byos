@@ -203,6 +203,11 @@ export default function ProjectView() {
     await createScene(user.uid, projectId, scenes.length)
   }
 
+  async function handleAddDivider() {
+    if (!user || !projectId) return
+    await createDivider(user.uid, projectId, scenes.length)
+  }
+
   async function handleDeleteScene(sceneId: string) {
     if (!user || !projectId) return
     await deleteScene(user.uid, projectId, sceneId)
@@ -219,19 +224,44 @@ export default function ProjectView() {
     await reorderScenes(user.uid, projectId, reordered)
   }
 
-  // All unique characters across all scenes, in order of first appearance
+  async function handleDividerLabelChange(id: string, label: string) {
+    if (!user || !projectId) return
+    await updateDivider(user.uid, projectId, id, { label })
+  }
+
+  async function handleDividerColorChange(id: string, color: string | null) {
+    if (!user || !projectId) return
+    await updateDivider(user.uid, projectId, id, { color })
+  }
+
+  // All unique characters across all scenes, in order of first appearance.
+  // Dividers contribute none (handled in getSceneCharacters).
   const allCharacters = Array.from(
     new Set(scenes.flatMap(getSceneCharacters))
   )
 
   // name → stored color key, keyed by uppercase name for case-insensitive lookup
   const charColorMap = new Map<string, string | undefined>(
-    scenes.flatMap((s) => (s.outline?.characters ?? []).map((c) => [c.name.trim().toUpperCase(), c.color]))
+    scenes.flatMap((s) =>
+      isDivider(s)
+        ? []
+        : (s.outline?.characters ?? []).map((c) => [c.name.trim().toUpperCase(), c.color])
+    )
   )
 
+  // 1-based position within each act/section. Resets at every divider.
+  const sectionIndices = computeSectionIndices(scenes)
+
+  // When filtering by a character, hide dividers too — otherwise the page
+  // becomes a stack of bare break-bars between filtered scenes.
   const filteredScenes = selectedCharacter
-    ? scenes.filter((s) => getSceneCharacters(s).includes(selectedCharacter))
+    ? scenes.filter((s) => !isDivider(s) && getSceneCharacters(s).includes(selectedCharacter))
     : scenes
+
+  // Compile gate must only consider real scenes — dividers have no Liars Pass.
+  const realScenes = onlyScenes(scenes)
+  const hasScenes = realScenes.length > 0
+  const compileReady = hasScenes && realScenes.every((s) => s.state === 'liars_pass_complete')
 
   function openScene(scene: Scene) {
     const base = `/project/${projectId}/scene/${scene.id}`
@@ -257,23 +287,32 @@ export default function ProjectView() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
-      <header className="border-b border-zinc-800 px-6 py-4 flex items-center gap-4">
-        <Link to="/" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+      <header className="border-b border-zinc-800 px-6 py-4 flex items-start gap-4">
+        <Link
+          to="/"
+          className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors mt-0.5 shrink-0"
+        >
           ← Projects
         </Link>
-        <span className="text-zinc-700">|</span>
-        <h1 className="text-zinc-100 font-semibold text-base flex-1">Scene Outline</h1>
+        <span className="text-zinc-700 mt-0.5">|</span>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-zinc-100 font-semibold text-base">Plot Your Beats</h1>
+          <p className="text-zinc-500 text-xs mt-0.5 leading-relaxed">
+            What happens, in what order? Lay out every beat as a card. Add act breaks or
+            midpoints to mark structure. When you're ready to dive into a scene, hit Open.
+          </p>
+        </div>
         <button
           onClick={() => setShowCompile(true)}
-          disabled={scenes.length === 0 || !scenes.every((s) => s.state === 'liars_pass_complete')}
+          disabled={!compileReady}
           title={
-            scenes.length === 0
+            !hasScenes
               ? 'Add scenes first'
-              : !scenes.every((s) => s.state === 'liars_pass_complete')
+              : !compileReady
               ? 'Complete the Liars Pass for all scenes to compile'
               : undefined
           }
-          className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors shrink-0"
         >
           Compile Script
         </button>
@@ -283,14 +322,23 @@ export default function ProjectView() {
         {/* Sidebar */}
         <aside className="w-64 border-r border-zinc-800 flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-            <span className="text-zinc-400 text-xs uppercase tracking-widest font-medium">Scenes</span>
-            <button
-              onClick={handleAddScene}
-              className="text-zinc-400 hover:text-zinc-200 text-lg leading-none transition-colors"
-              title="Add scene"
-            >
-              +
-            </button>
+            <span className="text-zinc-400 text-xs uppercase tracking-widest font-medium">Beats</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleAddScene}
+                className="text-zinc-400 hover:text-zinc-200 text-xs transition-colors"
+                title="Add scene card"
+              >
+                + Scene
+              </button>
+              <button
+                onClick={handleAddDivider}
+                className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+                title="Add act break or midpoint divider"
+              >
+                + Break
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto py-2 px-2">
@@ -300,22 +348,30 @@ export default function ProjectView() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext items={scenes.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-                {scenes.map((scene, index) => (
-                  <SortableSceneRow
-                    key={scene.id}
-                    scene={scene}
-                    index={index}
-                    isActive={scene.id === activeSceneId}
-                    onSelect={() => openScene(scene)}
-                    onDelete={() => handleDeleteScene(scene.id)}
-                  />
-                ))}
+                {scenes.map((scene) =>
+                  isDivider(scene) ? (
+                    <SortableDividerRow
+                      key={scene.id}
+                      divider={scene}
+                      onDelete={() => handleDeleteScene(scene.id)}
+                    />
+                  ) : (
+                    <SortableSceneRow
+                      key={scene.id}
+                      scene={scene}
+                      sectionIndex={sectionIndices.get(scene.id) ?? 0}
+                      isActive={scene.id === activeSceneId}
+                      onSelect={() => openScene(scene)}
+                      onDelete={() => handleDeleteScene(scene.id)}
+                    />
+                  )
+                )}
               </SortableContext>
             </DndContext>
 
             {scenes.length === 0 && (
               <p className="text-zinc-600 text-xs text-center py-8 px-4">
-                No scenes yet. Click + to add one.
+                No beats yet. Click + Scene to add one.
               </p>
             )}
           </div>
@@ -324,14 +380,28 @@ export default function ProjectView() {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-8">
           {scenes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-              <p className="text-zinc-500 text-lg">No scenes yet.</p>
-              <button
-                onClick={handleAddScene}
-                className="text-zinc-400 hover:text-zinc-200 text-sm underline underline-offset-4 transition-colors"
-              >
-                Add your first scene
-              </button>
+            <div className="flex flex-col items-center justify-center h-full gap-6 text-center max-w-md mx-auto">
+              <div className="space-y-2">
+                <p className="text-zinc-300 text-lg font-medium">Start with the beats.</p>
+                <p className="text-zinc-500 text-sm leading-relaxed">
+                  Lay out what happens in your story, in order. One card per beat.
+                  Drop in act breaks or a midpoint to mark the structure.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAddScene}
+                  className="bg-zinc-100 hover:bg-white text-zinc-900 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                  + Add first beat
+                </button>
+                <button
+                  onClick={handleAddDivider}
+                  className="text-zinc-400 hover:text-zinc-200 text-sm transition-colors"
+                >
+                  + Add break
+                </button>
+              </div>
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-6">
@@ -371,19 +441,29 @@ export default function ProjectView() {
               >
                 <SortableContext items={scenes.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-4">
-                    {filteredScenes.map((scene) => (
-                      <SortableSceneCard
-                        key={scene.id}
-                        scene={scene}
-                        index={scenes.indexOf(scene)}
-                        projectId={projectId!}
-                        onOpen={() => openScene(scene)}
-                        onRename={(header) => handleRenameScene(scene.id, header)}
-                        onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
-                        highlightCharacter={selectedCharacter}
-                        charColorMap={charColorMap}
-                      />
-                    ))}
+                    {filteredScenes.map((scene) =>
+                      isDivider(scene) ? (
+                        <SortableDividerBar
+                          key={scene.id}
+                          divider={scene}
+                          onLabelChange={(label) => handleDividerLabelChange(scene.id, label)}
+                          onColorChange={(color) => handleDividerColorChange(scene.id, color)}
+                          onDelete={() => handleDeleteScene(scene.id)}
+                        />
+                      ) : (
+                        <SortableSceneCard
+                          key={scene.id}
+                          scene={scene}
+                          sectionIndex={sectionIndices.get(scene.id) ?? 0}
+                          projectId={projectId!}
+                          onOpen={() => openScene(scene)}
+                          onRename={(header) => handleRenameScene(scene.id, header)}
+                          onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
+                          highlightCharacter={selectedCharacter}
+                          charColorMap={charColorMap}
+                        />
+                      )
+                    )}
                   </div>
                 </SortableContext>
               </DndContext>
@@ -392,6 +472,24 @@ export default function ProjectView() {
                 <p className="text-zinc-600 text-sm text-center py-8">
                   No scenes with <span className="text-zinc-400">{selectedCharacter}</span>.
                 </p>
+              )}
+
+              {/* Bottom-of-list add controls — keeps users on the page */}
+              {!selectedCharacter && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={handleAddScene}
+                    className="text-zinc-400 hover:text-zinc-200 text-sm border border-dashed border-zinc-700 hover:border-zinc-500 rounded-lg px-4 py-2 transition-colors"
+                  >
+                    + Add scene beat
+                  </button>
+                  <button
+                    onClick={handleAddDivider}
+                    className="text-zinc-500 hover:text-zinc-300 text-sm border border-dashed border-zinc-800 hover:border-zinc-600 rounded-lg px-4 py-2 transition-colors"
+                  >
+                    + Add break
+                  </button>
+                </div>
               )}
             </div>
           )}
