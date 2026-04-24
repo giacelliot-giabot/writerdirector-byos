@@ -332,18 +332,12 @@ export default function SceneOutline() {
 
             {/* Advance */}
             <div className="pb-8 flex justify-end">
-              {isComplete ? (
-                <button
-                  onClick={handleAdvance}
-                  className="flex items-center gap-2 bg-zinc-100 text-zinc-900 font-semibold text-sm px-6 py-3 rounded-xl hover:bg-white transition-colors"
-                >
-                  Community Theater Pass →
-                </button>
-              ) : (
-                <p className="text-zinc-600 text-xs">
-                  Complete all characters + setting to continue →
-                </p>
-              )}
+              <button
+                onClick={handleAdvance}
+                className="flex items-center gap-2 bg-zinc-100 text-zinc-900 font-semibold text-sm px-6 py-3 rounded-xl hover:bg-white transition-colors"
+              >
+                Community Theater Pass →
+              </button>
             </div>
           </div>
 

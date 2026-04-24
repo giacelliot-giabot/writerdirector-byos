@@ -21,25 +21,30 @@ import { useAuth } from '../context/AuthContext'
 import {
   subscribeToScenes,
   createScene,
+  createDivider,
   deleteScene,
   reorderScenes,
   updateSceneHeader,
   updateScenePlot,
+  updateDivider,
+  isDivider,
+  onlyScenes,
   type Scene,
 } from '../lib/scenes'
-import { resolveCharColor } from '../lib/characterColors'
+import { resolveCharColor, COLOR_PALETTE, MONOCHROME } from '../lib/characterColors'
 import ProgressDots from '../components/ProgressDots'
 import CompileModal from '../components/CompileModal'
 
 function SortableSceneRow({
   scene,
-  index,
+  sectionIndex,
   isActive,
   onSelect,
   onDelete,
 }: {
   scene: Scene
-  index: number
+  /** 1-based index within the current act/section. */
+  sectionIndex: number
   isActive: boolean
   onSelect: () => void
   onDelete: () => void
@@ -69,7 +74,7 @@ function SortableSceneRow({
       >
         ⠿
       </span>
-      <span className="text-zinc-500 text-xs w-5 shrink-0">{index + 1}</span>
+      <span className="text-zinc-500 text-xs w-5 shrink-0">{sectionIndex}</span>
       <span className="text-zinc-300 text-xs truncate flex-1">
         {scene.sceneHeader || <span className="text-zinc-600 italic">Untitled</span>}
       </span>
@@ -83,7 +88,64 @@ function SortableSceneRow({
   )
 }
 
+function SortableDividerRow({
+  divider,
+  onDelete,
+}: {
+  divider: Scene
+  onDelete: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: divider.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const accent = divider.color
+    ? COLOR_PALETTE.find((p) => p.key === divider.color)?.swatch
+    : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 px-2 py-2 group ${isDragging ? 'opacity-50' : ''}`}
+    >
+      <span
+        {...attributes}
+        {...listeners}
+        className="text-zinc-700 hover:text-zinc-400 cursor-grab active:cursor-grabbing text-xs select-none"
+      >
+        ⠿
+      </span>
+      <div
+        className="flex-1 border-t"
+        style={{ borderColor: accent ?? '#3f3f46' }}
+      />
+      <span
+        className="text-[10px] uppercase tracking-widest font-semibold whitespace-nowrap"
+        style={{ color: accent ?? '#71717a' }}
+      >
+        {divider.label?.trim() || 'Untitled break'}
+      </span>
+      <div
+        className="flex-1 border-t"
+        style={{ borderColor: accent ?? '#3f3f46' }}
+      />
+      <button
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-400 text-xs transition-all"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
 function getSceneCharacters(scene: Scene): string[] {
+  if (isDivider(scene)) return []
   const fromOutline = (scene.outline?.characters ?? [])
     .map((c) => c.name.trim().toUpperCase())
     .filter(Boolean)
@@ -97,6 +159,24 @@ function getSceneCharacters(scene: Scene): string[] {
     .filter(Boolean)
 
   return Array.from(new Set([...fromOutline, ...fromScript]))
+}
+
+/**
+ * Walk the ordered list and assign each scene its position within the current
+ * act/section (counter resets at every divider). Dividers themselves get null.
+ */
+function computeSectionIndices(items: Scene[]): Map<string, number> {
+  const map = new Map<string, number>()
+  let counter = 0
+  for (const it of items) {
+    if (isDivider(it)) {
+      counter = 0
+      continue
+    }
+    counter += 1
+    map.set(it.id, counter)
+  }
+  return map
 }
 
 export default function ProjectView() {
@@ -154,7 +234,14 @@ export default function ProjectView() {
     : scenes
 
   function openScene(scene: Scene) {
-    navigate(`/project/${projectId}/scene/${scene.id}`)
+    const base = `/project/${projectId}/scene/${scene.id}`
+    if (['liars_pass_in_progress', 'liars_pass_complete'].includes(scene.state)) {
+      navigate(`${base}/liars-pass`)
+    } else if (['community_theater_in_progress', 'community_theater_complete'].includes(scene.state)) {
+      navigate(`${base}/community-theater`)
+    } else {
+      navigate(base)
+    }
   }
 
   async function handleRenameScene(sceneId: string, header: string) {

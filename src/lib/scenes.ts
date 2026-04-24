@@ -49,9 +49,18 @@ export interface ScriptElement {
   text: string
 }
 
+export type SceneItemType = 'scene' | 'divider'
+
 export interface Scene {
   id: string
   order: number
+  /** Discriminator. Absent or 'scene' = real scene; 'divider' = act-break/midpoint bar. */
+  type?: SceneItemType
+  /** Divider-only: user-named label like "Act One" or "Midpoint". */
+  label?: string
+  /** Divider-only: accent color key from COLOR_PALETTE. */
+  color?: string
+  // Scene-only fields below — empty for dividers.
   sceneHeader: string
   state: SceneState
   outline: SceneOutline
@@ -65,6 +74,16 @@ export interface Scene {
     startedAt: Timestamp | null
     completedAt: Timestamp | null
   }
+}
+
+/** Type guard: true if the item is a divider (act break / midpoint), not a real scene. */
+export function isDivider(s: Scene): boolean {
+  return s.type === 'divider'
+}
+
+/** Filters dividers out — use anywhere you want only real scenes. */
+export function onlyScenes(items: Scene[]): Scene[] {
+  return items.filter((s) => !isDivider(s))
 }
 
 export function emptyCharacter(name = ''): CharacterData {
@@ -126,6 +145,7 @@ export function subscribeToScenes(
 export async function createScene(userId: string, projectId: string, order: number) {
   await addDoc(scenesRef(userId, projectId), {
     order,
+    type: 'scene',
     sceneHeader: '',
     state: 'untouched',
     outline: emptyOutline(),
@@ -133,6 +153,40 @@ export async function createScene(userId: string, projectId: string, order: numb
     liarsPass: { content: [], startedAt: null, completedAt: null },
     createdAt: serverTimestamp(),
   })
+}
+
+export async function createDivider(
+  userId: string,
+  projectId: string,
+  order: number,
+  label = ''
+) {
+  await addDoc(scenesRef(userId, projectId), {
+    order,
+    type: 'divider',
+    label,
+    color: null,
+    // Empty scene fields so the doc shape stays consistent for safety.
+    sceneHeader: '',
+    state: 'untouched',
+    outline: emptyOutline(),
+    communityTheater: { content: [], startedAt: null, completedAt: null },
+    liarsPass: { content: [], startedAt: null, completedAt: null },
+    createdAt: serverTimestamp(),
+  })
+}
+
+export async function updateDivider(
+  userId: string,
+  projectId: string,
+  dividerId: string,
+  patch: { label?: string; color?: string | null }
+) {
+  const update: Record<string, unknown> = {}
+  if (patch.label !== undefined) update.label = patch.label
+  if (patch.color !== undefined) update.color = patch.color
+  if (Object.keys(update).length === 0) return
+  await updateDoc(sceneRef(userId, projectId, dividerId), update)
 }
 
 export async function deleteScene(userId: string, projectId: string, sceneId: string) {

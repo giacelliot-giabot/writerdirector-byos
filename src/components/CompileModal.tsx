@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { exportToFDX, exportToPDF } from '../lib/export'
-import type { Scene } from '../lib/scenes'
+import { onlyScenes, type Scene } from '../lib/scenes'
 
 interface Props {
   scenes: Scene[]
@@ -15,7 +15,8 @@ export default function CompileModal({ scenes, defaultTitle = '', onClose }: Pro
   const [author, setAuthor] = useState('')
   const [format, setFormat] = useState<Format>('fdx')
 
-  const sorted = [...scenes].sort((a, b) => a.order - b.order)
+  // Dividers are structural-only — never appear in compiled output.
+  const sorted = onlyScenes([...scenes].sort((a, b) => a.order - b.order))
   const withContent = sorted.filter((s) => (s.liarsPass?.content ?? []).some((b) => b.text.trim()))
   const missing = sorted.filter((s) => !(s.liarsPass?.content ?? []).some((b) => b.text.trim()))
 

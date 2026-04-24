@@ -200,16 +200,12 @@ export default function CommunityTheater() {
                 </button>
               )}
             </div>
-            {hasContent ? (
-              <button
-                onClick={handleAdvance}
-                className="flex items-center gap-2 bg-zinc-100 text-zinc-900 font-semibold text-sm px-5 py-2 rounded-lg hover:bg-white transition-colors"
-              >
-                Liars Pass →
-              </button>
-            ) : (
-              <span className="text-zinc-700 text-xs">Write the scene to continue →</span>
-            )}
+            <button
+              onClick={handleAdvance}
+              className="flex items-center gap-2 bg-zinc-100 text-zinc-900 font-semibold text-sm px-5 py-2 rounded-lg hover:bg-white transition-colors"
+            >
+              Liars Pass →
+            </button>
           </div>
         </div>
       </div>
