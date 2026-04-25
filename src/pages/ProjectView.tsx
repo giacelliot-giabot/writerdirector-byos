@@ -26,9 +26,11 @@ import {
   reorderScenes,
   updateSceneHeader,
   updateScenePlot,
+  updateSceneOutline,
   updateDivider,
   isDivider,
   onlyScenes,
+  emptyCharacter,
   type Scene,
 } from '../lib/scenes'
 import { resolveCharColor, COLOR_PALETTE, MONOCHROME } from '../lib/characterColors'
@@ -373,12 +375,31 @@ export default function ProjectView() {
 
   async function handleRenameScene(sceneId: string, header: string) {
     if (!user || !projectId) return
-    await updateSceneHeader(user.uid, projectId, sceneId, header.toUpperCase())
+    await updateSceneHeader(user.uid, projectId, sceneId, header)
   }
 
   async function handleDescriptionChange(sceneId: string, description: string) {
     if (!user || !projectId) return
     await updateScenePlot(user.uid, projectId, sceneId, description)
+  }
+
+  async function handleAddCharacter(sceneId: string, name: string) {
+    if (!user || !projectId) return
+    const scene = scenes.find((s) => s.id === sceneId)
+    if (!scene) return
+    const existing = scene.outline?.characters ?? []
+    const trimmed = name.trim().toUpperCase()
+    if (!trimmed || existing.some((c) => c.name.toUpperCase() === trimmed)) return
+    const updated = [...existing, emptyCharacter(trimmed)]
+    await updateSceneOutline(user.uid, projectId, sceneId, { characters: updated })
+  }
+
+  async function handleRemoveCharacter(sceneId: string, characterId: string) {
+    if (!user || !projectId) return
+    const scene = scenes.find((s) => s.id === sceneId)
+    if (!scene) return
+    const updated = (scene.outline?.characters ?? []).filter((c) => c.id !== characterId)
+    await updateSceneOutline(user.uid, projectId, sceneId, { characters: updated })
   }
 
   return (
@@ -568,6 +589,8 @@ export default function ProjectView() {
                           onOpen={() => openScene(scene)}
                           onRename={(header) => handleRenameScene(scene.id, header)}
                           onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
+                          onAddCharacter={(name) => handleAddCharacter(scene.id, name)}
+                          onRemoveCharacter={(id) => handleRemoveCharacter(scene.id, id)}
                           highlightCharacter={selectedCharacter}
                           charColorMap={charColorMap}
                           isActive={scene.id === activeSceneId}
@@ -626,6 +649,8 @@ function SortableSceneCard(props: {
   onOpen: () => void
   onRename: (header: string) => void
   onDescriptionChange: (desc: string) => void
+  onAddCharacter: (name: string) => void
+  onRemoveCharacter: (characterId: string) => void
   highlightCharacter?: string | null
   charColorMap?: Map<string, string | undefined>
   isActive?: boolean
@@ -660,6 +685,8 @@ function SceneCard({
   onOpen,
   onRename,
   onDescriptionChange,
+  onAddCharacter,
+  onRemoveCharacter,
   dragHandleProps,
   highlightCharacter,
   charColorMap,
@@ -671,6 +698,8 @@ function SceneCard({
   onOpen: () => void
   onRename: (header: string) => void
   onDescriptionChange: (desc: string) => void
+  onAddCharacter: (name: string) => void
+  onRemoveCharacter: (characterId: string) => void
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>
   highlightCharacter?: string | null
   charColorMap?: Map<string, string | undefined>
@@ -680,7 +709,10 @@ function SceneCard({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(scene.sceneHeader || '')
   const [description, setDescription] = useState(scene.outline?.settingPlot || '')
+  const [addingChar, setAddingChar] = useState(false)
+  const [charDraft, setCharDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const charInputRef = useRef<HTMLInputElement>(null)
   const characters = getSceneCharacters(scene)
 
   useEffect(() => {
@@ -691,6 +723,10 @@ function SceneCard({
     if (!editing) setDraft(scene.sceneHeader || '')
   }, [scene.sceneHeader, editing])
 
+  useEffect(() => {
+    if (addingChar) charInputRef.current?.focus()
+  }, [addingChar])
+
   // Sync description from external updates only if not currently focused
   const descFocused = useRef(false)
   useEffect(() => {
@@ -698,7 +734,7 @@ function SceneCard({
   }, [scene.outline?.settingPlot])
 
   function commit() {
-    const value = draft.trim().toUpperCase()
+    const value = draft.trim()
     setDraft(value)
     setEditing(false)
     onRename(value)
@@ -707,6 +743,13 @@ function SceneCard({
   function commitDescription() {
     descFocused.current = false
     onDescriptionChange(description)
+  }
+
+  function submitCharacter() {
+    const name = charDraft.trim()
+    if (name) onAddCharacter(name)
+    setCharDraft('')
+    setAddingChar(false)
   }
 
   return (
@@ -726,23 +769,23 @@ function SceneCard({
             <input
               ref={inputRef}
               value={draft}
-              onChange={(e) => setDraft(e.target.value.toUpperCase())}
+              onChange={(e) => setDraft(e.target.value)}
               onBlur={commit}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') commit()
                 if (e.key === 'Escape') { setDraft(scene.sceneHeader || ''); setEditing(false) }
               }}
-              placeholder="INT. LOCATION — DAY"
-              className="flex-1 bg-transparent text-zinc-100 font-mono text-sm font-semibold placeholder-zinc-600 outline-none uppercase tracking-wide border-b border-zinc-600 focus:border-zinc-400 transition-colors"
+              placeholder="Working title or INT. LOCATION — DAY"
+              className="flex-1 bg-transparent text-zinc-100 font-mono text-sm font-semibold placeholder-zinc-600 outline-none tracking-wide border-b border-zinc-600 focus:border-zinc-400 transition-colors"
             />
           ) : (
             <button
               onClick={() => setEditing(true)}
               className="flex-1 text-left group flex items-center gap-2"
-              title="Click to rename"
+              title="Click to edit"
             >
               <span className="text-zinc-100 font-semibold text-sm font-mono truncate">
-                {scene.sceneHeader || <span className="text-zinc-500 italic font-normal">Untitled scene</span>}
+                {scene.sceneHeader || <span className="text-zinc-500 italic font-normal">Untitled beat</span>}
               </span>
               <span className="text-zinc-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 edit
@@ -777,19 +820,73 @@ function SceneCard({
           {characters.length > 0 && (
             <span className="text-zinc-700 text-xs select-none">·</span>
           )}
-          {characters.map((name) => {
+          {(scene.outline?.characters ?? []).map((char) => {
+            const name = char.name.trim().toUpperCase()
+            if (!name) return null
             const color = resolveCharColor(charColorMap?.get(name))
             const style = highlightCharacter === name ? color.active : color.idle
             return (
               <span
-                key={name}
+                key={char.id}
                 style={{ background: style.background, color: style.color }}
-                className="px-2 py-0.5 rounded-full text-xs font-medium tracking-wide"
+                className="group/pill relative px-2 py-0.5 rounded-full text-xs font-medium tracking-wide flex items-center gap-1"
               >
                 {name}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveCharacter(char.id) }}
+                  className="opacity-0 group-hover/pill:opacity-100 transition-opacity text-current leading-none ml-0.5 hover:opacity-70"
+                  title="Remove character"
+                >
+                  ×
+                </button>
               </span>
             )
           })}
+          {/* Characters from scripts (not in outline.characters) — read-only pills */}
+          {[
+            ...(scene.communityTheater?.content ?? []),
+            ...(scene.liarsPass?.content ?? []),
+          ]
+            .filter((el) => el.type === 'character')
+            .map((el) => el.text.trim().toUpperCase())
+            .filter((name, i, arr) => name && arr.indexOf(name) === i)
+            .filter((name) => !(scene.outline?.characters ?? []).some((c) => c.name.toUpperCase() === name))
+            .map((name) => {
+              const color = resolveCharColor(charColorMap?.get(name))
+              const style = highlightCharacter === name ? color.active : color.idle
+              return (
+                <span
+                  key={name}
+                  style={{ background: style.background, color: style.color }}
+                  className="px-2 py-0.5 rounded-full text-xs font-medium tracking-wide"
+                >
+                  {name}
+                </span>
+              )
+            })}
+          {/* Add character */}
+          {addingChar ? (
+            <input
+              ref={charInputRef}
+              value={charDraft}
+              onChange={(e) => setCharDraft(e.target.value)}
+              onBlur={() => { submitCharacter() }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitCharacter()
+                if (e.key === 'Escape') { setCharDraft(''); setAddingChar(false) }
+              }}
+              placeholder="CHARACTER NAME"
+              className="bg-zinc-800 text-zinc-200 placeholder-zinc-600 text-xs font-mono font-medium px-2 py-0.5 rounded-full outline-none w-36 uppercase tracking-wide"
+            />
+          ) : (
+            <button
+              onClick={() => setAddingChar(true)}
+              className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors leading-none"
+              title="Add character to this beat"
+            >
+              + character
+            </button>
+          )}
         </div>
       </div>
       {/*

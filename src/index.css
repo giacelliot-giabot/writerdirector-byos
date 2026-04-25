@@ -24,3 +24,8 @@ html.light button > span[role="img"],
 html.light .no-invert {
   filter: invert(1) hue-rotate(180deg);
 }
+
+/* Explicit Courier New for screenplay editor — overrides the system monospace stack */
+.screenplay-mono {
+  font-family: 'Courier New', Courier, monospace;
+}

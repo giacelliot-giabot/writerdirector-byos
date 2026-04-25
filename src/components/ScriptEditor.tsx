@@ -12,12 +12,12 @@ import type { ScriptElement } from '../lib/scenes'
 type BlockType = ScriptElement['type']
 
 const BLOCK_STYLE: Record<BlockType, string> = {
-  scene_heading: 'font-mono text-sm tracking-wide w-full text-left',
-  action:        'font-mono text-sm w-full text-left',
-  character:     'font-mono text-sm uppercase w-full pl-[37%]',
-  dialogue:      'font-mono text-sm w-full px-[17%]',
-  parenthetical: 'font-mono text-sm italic w-full pl-[27%] pr-[15%]',
-  transition:    'font-mono text-sm uppercase w-full text-right',
+  scene_heading: 'screenplay-mono text-sm tracking-wide w-full text-left',
+  action:        'screenplay-mono text-sm w-full text-left',
+  character:     'screenplay-mono text-sm uppercase w-full pl-[37%]',
+  dialogue:      'screenplay-mono text-sm w-full px-[17%]',
+  parenthetical: 'screenplay-mono text-sm italic w-full pl-[27%] pr-[15%]',
+  transition:    'screenplay-mono text-sm uppercase w-full text-right',
 }
 
 const BLOCK_LABEL: Record<BlockType, string> = {
@@ -159,6 +159,14 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false, known
   useEffect(() => {
     refs.current.forEach((el) => resize(el))
   }, [blocks])
+
+  // Focus the first block once, as soon as blocks are available
+  const hasAutoFocused = useRef(false)
+  useEffect(() => {
+    if (readOnly || hasAutoFocused.current || blocks.length === 0) return
+    hasAutoFocused.current = true
+    focus(blocks[0].id, false) // place cursor at start, not end
+  }, [blocks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function focus(id: string, toEnd = true) {
     if (rafId.current !== null) cancelAnimationFrame(rafId.current)
@@ -311,13 +319,19 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false, known
 
   return (
     <>
-      <div className="w-full space-y-0.5">
-        {blocks.map((block) => (
+      <div className="w-full">
+        {blocks.map((block, i) => {
+          const prevType = i > 0 ? blocks[i - 1].type : null
+          const compact =
+            (block.type === 'dialogue' || block.type === 'parenthetical') &&
+            (prevType === 'character' || prevType === 'parenthetical')
+          return (
           <BlockRow
             key={block.id}
             block={block}
             label={BLOCK_LABEL[block.type]}
             textareaClass={BLOCK_STYLE[block.type]}
+            compact={compact}
             refCallback={(el) => {
               if (el) refs.current.set(block.id, el)
               else refs.current.delete(block.id)
@@ -331,7 +345,8 @@ export default function ScriptEditor({ blocks, onChange, readOnly = false, known
               onChange(blocks.map((b) => (b.id === block.id ? { ...b, text: name } : b)))
             }}
           />
-        ))}
+          )
+        })}
       </div>
 
       {/* Quick keys hint */}
@@ -453,6 +468,7 @@ function BlockRow({
   block,
   label,
   textareaClass,
+  compact = false,
   refCallback,
   onChange,
   onKeyDown,
@@ -462,6 +478,7 @@ function BlockRow({
   block: ScriptElement
   label: string
   textareaClass: string
+  compact?: boolean
   refCallback: (el: HTMLTextAreaElement | null) => void
   onChange: (raw: string) => void
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
@@ -480,7 +497,7 @@ function BlockRow({
       : []
 
   return (
-    <div className="relative group w-full py-0.5">
+    <div className={`relative group w-full ${compact ? 'pt-0 pb-0.5' : 'py-0.5 mt-0.5'}`}>
       {/* Block type label */}
       <span className="absolute -left-24 top-1 text-[10px] text-zinc-700 uppercase tracking-widest opacity-0 group-focus-within:opacity-100 transition-opacity select-none w-20 text-right hidden lg:block">
         {label}
