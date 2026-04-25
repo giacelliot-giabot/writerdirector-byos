@@ -41,6 +41,7 @@ function SortableSceneRow({
   isActive,
   onSelect,
   onDelete,
+  onRename,
 }: {
   scene: Scene
   /** 1-based index within the current act/section. */
@@ -48,9 +49,28 @@ function SortableSceneRow({
   isActive: boolean
   onSelect: () => void
   onDelete: () => void
+  onRename: (header: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: scene.id })
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(scene.sceneHeader || '')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  useEffect(() => {
+    if (!editing) setDraft(scene.sceneHeader || '')
+  }, [scene.sceneHeader, editing])
+
+  function commit() {
+    const value = draft.trim().toUpperCase()
+    setDraft(value)
+    setEditing(false)
+    onRename(value)
+  }
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -61,26 +81,46 @@ function SortableSceneRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-colors ${
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg group transition-colors ${
         isActive ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'
       } ${isDragging ? 'opacity-50' : ''}`}
-      onClick={onSelect}
+      onClick={() => { if (!editing) onSelect() }}
     >
       <span
         {...attributes}
         {...listeners}
-        className="text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing text-xs select-none"
+        className="text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing text-xs select-none shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         ⠿
       </span>
       <span className="text-zinc-500 text-xs w-5 shrink-0">{sectionIndex}</span>
-      <span className="text-zinc-300 text-xs truncate flex-1">
-        {scene.sceneHeader || <span className="text-zinc-600 italic">Untitled</span>}
-      </span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.toUpperCase())}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') { setDraft(scene.sceneHeader || ''); setEditing(false) }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          placeholder="INT. LOCATION — DAY"
+          className="flex-1 bg-transparent text-zinc-200 text-xs font-mono uppercase outline-none border-b border-zinc-600 focus:border-zinc-400 placeholder-zinc-600 transition-colors min-w-0"
+        />
+      ) : (
+        <span
+          className="text-zinc-300 text-xs truncate flex-1 cursor-text"
+          onDoubleClick={(e) => { e.stopPropagation(); setEditing(true) }}
+          title="Double-click to rename"
+        >
+          {scene.sceneHeader || <span className="text-zinc-600 italic">Untitled</span>}
+        </span>
+      )}
       <button
         onClick={(e) => { e.stopPropagation(); onDelete() }}
-        className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 text-xs transition-all"
+        className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 text-xs transition-all shrink-0"
       >
         ✕
       </button>
@@ -91,12 +131,30 @@ function SortableSceneRow({
 function SortableDividerRow({
   divider,
   onDelete,
+  onLabelChange,
 }: {
   divider: Scene
   onDelete: () => void
+  onLabelChange: (label: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: divider.id })
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(divider.label || '')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  useEffect(() => {
+    if (!editing) setDraft(divider.label || '')
+  }, [divider.label, editing])
+
+  function commit() {
+    setEditing(false)
+    onLabelChange(draft.trim())
+  }
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -106,37 +164,51 @@ function SortableDividerRow({
   const accent = divider.color
     ? COLOR_PALETTE.find((p) => p.key === divider.color)?.swatch
     : undefined
+  const labelColor = accent ?? '#71717a'
+  const ruleColor = accent ?? '#3f3f46'
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 px-2 py-2 group ${isDragging ? 'opacity-50' : ''}`}
+      className={`flex items-center gap-1.5 px-2 py-2 group ${isDragging ? 'opacity-50' : ''}`}
     >
       <span
         {...attributes}
         {...listeners}
-        className="text-zinc-700 hover:text-zinc-400 cursor-grab active:cursor-grabbing text-xs select-none"
+        className="text-zinc-700 hover:text-zinc-400 cursor-grab active:cursor-grabbing text-xs select-none shrink-0"
       >
         ⠿
       </span>
-      <div
-        className="flex-1 border-t"
-        style={{ borderColor: accent ?? '#3f3f46' }}
-      />
-      <span
-        className="text-[10px] uppercase tracking-widest font-semibold whitespace-nowrap"
-        style={{ color: accent ?? '#71717a' }}
-      >
-        {divider.label?.trim() || 'Untitled break'}
-      </span>
-      <div
-        className="flex-1 border-t"
-        style={{ borderColor: accent ?? '#3f3f46' }}
-      />
+      <div className="flex-1 border-t min-w-0" style={{ borderColor: ruleColor }} />
+      {editing ? (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') { setDraft(divider.label || ''); setEditing(false) }
+          }}
+          placeholder="Act One, Midpoint…"
+          className="bg-transparent text-[10px] uppercase tracking-widest font-semibold outline-none border-b text-center min-w-0 w-20 placeholder-zinc-700 transition-colors"
+          style={{ color: labelColor, borderColor: labelColor }}
+        />
+      ) : (
+        <span
+          className="text-[10px] uppercase tracking-widest font-semibold whitespace-nowrap cursor-text hover:opacity-80 transition-opacity"
+          style={{ color: labelColor }}
+          onDoubleClick={() => setEditing(true)}
+          title="Double-click to rename"
+        >
+          {divider.label?.trim() || <span className="opacity-40 italic">Untitled</span>}
+        </span>
+      )}
+      <div className="flex-1 border-t min-w-0" style={{ borderColor: ruleColor }} />
       <button
         onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-400 text-xs transition-all"
+        className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-400 text-xs transition-all shrink-0"
       >
         ✕
       </button>
@@ -187,6 +259,31 @@ export default function ProjectView() {
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null)
   const [showCompile, setShowCompile] = useState(false)
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null)
+  const [sidebarWidth, setSidebarWidth] = useState(220)
+  const isResizing = useRef(false)
+  const sceneCardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  function scrollToScene(sceneId: string) {
+    setActiveSceneId(sceneId)
+    const el = sceneCardRefs.current.get(sceneId)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function startSidebarResize(e: React.MouseEvent) {
+    isResizing.current = true
+    e.preventDefault()
+    function onMouseMove(ev: MouseEvent) {
+      if (!isResizing.current) return
+      setSidebarWidth(Math.max(160, Math.min(480, ev.clientX)))
+    }
+    function onMouseUp() {
+      isResizing.current = false
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -285,9 +382,9 @@ export default function ProjectView() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Top bar */}
-      <header className="border-b border-zinc-800 px-6 py-4 flex items-start gap-4">
+      <header className="border-b border-zinc-800 px-6 py-4 flex items-start gap-4 shrink-0">
         <Link
           to="/"
           className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors mt-0.5 shrink-0"
@@ -318,10 +415,13 @@ export default function ProjectView() {
         </button>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <aside className="w-64 border-r border-zinc-800 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+        <aside
+          className="border-r border-zinc-800 flex flex-col shrink-0 relative"
+          style={{ width: sidebarWidth }}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
             <span className="text-zinc-400 text-xs uppercase tracking-widest font-medium">Beats</span>
             <div className="flex items-center gap-3">
               <button
@@ -341,7 +441,7 @@ export default function ProjectView() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto py-2 px-2">
+          <div className="flex-1 overflow-y-auto py-2 px-2 min-h-0">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -354,6 +454,7 @@ export default function ProjectView() {
                       key={scene.id}
                       divider={scene}
                       onDelete={() => handleDeleteScene(scene.id)}
+                      onLabelChange={(label) => handleDividerLabelChange(scene.id, label)}
                     />
                   ) : (
                     <SortableSceneRow
@@ -361,8 +462,9 @@ export default function ProjectView() {
                       scene={scene}
                       sectionIndex={sectionIndices.get(scene.id) ?? 0}
                       isActive={scene.id === activeSceneId}
-                      onSelect={() => openScene(scene)}
+                      onSelect={() => scrollToScene(scene.id)}
                       onDelete={() => handleDeleteScene(scene.id)}
+                      onRename={(header) => handleRenameScene(scene.id, header)}
                     />
                   )
                 )}
@@ -375,6 +477,13 @@ export default function ProjectView() {
               </p>
             )}
           </div>
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={startSidebarResize}
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-zinc-600 active:bg-zinc-500 transition-colors group"
+            title="Drag to resize"
+          />
         </aside>
 
         {/* Main content */}
@@ -461,6 +570,11 @@ export default function ProjectView() {
                           onDescriptionChange={(desc) => handleDescriptionChange(scene.id, desc)}
                           highlightCharacter={selectedCharacter}
                           charColorMap={charColorMap}
+                          isActive={scene.id === activeSceneId}
+                          cardRef={(el) => {
+                            if (el) sceneCardRefs.current.set(scene.id, el)
+                            else sceneCardRefs.current.delete(scene.id)
+                          }}
                         />
                       )
                     )}
@@ -514,6 +628,8 @@ function SortableSceneCard(props: {
   onDescriptionChange: (desc: string) => void
   highlightCharacter?: string | null
   charColorMap?: Map<string, string | undefined>
+  isActive?: boolean
+  cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: props.scene.id })
@@ -524,7 +640,14 @@ function SortableSceneCard(props: {
   }
 
   return (
-    <div ref={setNodeRef} style={style} className={isDragging ? 'opacity-50' : ''}>
+    <div
+      ref={(el) => {
+        setNodeRef(el)
+        props.cardRef?.(el)
+      }}
+      style={style}
+      className={isDragging ? 'opacity-50' : ''}
+    >
       <SceneCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
     </div>
   )
@@ -540,6 +663,7 @@ function SceneCard({
   dragHandleProps,
   highlightCharacter,
   charColorMap,
+  isActive,
 }: {
   scene: Scene
   sectionIndex: number
@@ -550,6 +674,8 @@ function SceneCard({
   dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>
   highlightCharacter?: string | null
   charColorMap?: Map<string, string | undefined>
+  isActive?: boolean
+  cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(scene.sceneHeader || '')
@@ -584,7 +710,7 @@ function SceneCard({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-start justify-between gap-4 hover:border-zinc-700 transition-colors group/card">
+    <div className={`bg-zinc-900 border rounded-xl p-4 flex items-start justify-between gap-4 transition-colors group/card ${isActive ? 'border-zinc-500 ring-1 ring-zinc-500/30' : 'border-zinc-800 hover:border-zinc-700'}`}>
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center gap-2">
           {/* Drag handle */}
