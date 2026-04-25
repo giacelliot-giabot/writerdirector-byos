@@ -706,8 +706,12 @@ function SceneCard({
   isActive?: boolean
   cardRef?: (el: HTMLDivElement | null) => void
 }) {
+  // Treat the old auto-generated placeholder as if the field is empty
+  const isPlaceholderHeader = (h: string) => /^INT\.\s+LOCATION\s*[—–-]\s*DAY$/i.test(h.trim())
+  const effectiveHeader = isPlaceholderHeader(scene.sceneHeader) ? '' : scene.sceneHeader
+
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(scene.sceneHeader || '')
+  const [draft, setDraft] = useState(effectiveHeader)
   const [description, setDescription] = useState(scene.outline?.settingPlot || '')
   const [addingChar, setAddingChar] = useState(false)
   const [charDraft, setCharDraft] = useState('')
@@ -720,7 +724,7 @@ function SceneCard({
   }, [editing])
 
   useEffect(() => {
-    if (!editing) setDraft(scene.sceneHeader || '')
+    if (!editing) setDraft(effectiveHeader)
   }, [scene.sceneHeader, editing])
 
   useEffect(() => {
@@ -773,7 +777,7 @@ function SceneCard({
               onBlur={commit}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') commit()
-                if (e.key === 'Escape') { setDraft(scene.sceneHeader || ''); setEditing(false) }
+                if (e.key === 'Escape') { setDraft(effectiveHeader); setEditing(false) }
               }}
               placeholder="Working title or INT. LOCATION — DAY"
               className="flex-1 bg-transparent text-zinc-100 font-mono text-sm font-semibold placeholder-zinc-600 outline-none tracking-wide border-b border-zinc-600 focus:border-zinc-400 transition-colors"
@@ -785,7 +789,7 @@ function SceneCard({
               title="Click to edit"
             >
               <span className="text-zinc-100 font-semibold text-sm font-mono truncate">
-                {scene.sceneHeader || <span className="text-zinc-500 italic font-normal">Untitled beat</span>}
+                {effectiveHeader || <span className="text-zinc-500 italic font-normal">Untitled beat</span>}
               </span>
               <span className="text-zinc-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 edit
@@ -869,19 +873,19 @@ function SceneCard({
             <input
               ref={charInputRef}
               value={charDraft}
-              onChange={(e) => setCharDraft(e.target.value)}
+              onChange={(e) => setCharDraft(e.target.value.toUpperCase())}
               onBlur={() => { submitCharacter() }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') submitCharacter()
                 if (e.key === 'Escape') { setCharDraft(''); setAddingChar(false) }
               }}
-              placeholder="CHARACTER NAME"
-              className="bg-zinc-800 text-zinc-200 placeholder-zinc-600 text-xs font-mono font-medium px-2 py-0.5 rounded-full outline-none w-36 uppercase tracking-wide"
+              placeholder="NAME"
+              className="bg-zinc-800 text-zinc-200 placeholder-zinc-600 text-xs font-mono font-medium px-2 py-0.5 rounded-full outline-none w-24 uppercase tracking-wide border border-zinc-600"
             />
           ) : (
             <button
               onClick={() => setAddingChar(true)}
-              className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors leading-none"
+              className="px-2 py-0.5 rounded-full text-xs font-medium border border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300 transition-colors"
               title="Add character to this beat"
             >
               + character
