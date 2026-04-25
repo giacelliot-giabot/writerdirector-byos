@@ -10,7 +10,7 @@ import {
   type ScriptElement,
 } from '../lib/scenes'
 import ScriptEditor from '../components/ScriptEditor'
-import OutlineReference from '../components/OutlineReference'
+import EmotionalOutlineMirror from '../components/EmotionalOutlineMirror'
 import VersionHistoryModal from '../components/VersionHistoryModal'
 import ProgressDots from '../components/ProgressDots'
 
@@ -125,7 +125,7 @@ export default function CommunityTheater() {
       {/* Header */}
       <header className="border-b border-zinc-800 px-6 py-3 flex items-center gap-4">
         <Link to={`/project/${projectId}`} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors shrink-0">
-          ← Scenes
+          ← Beats
         </Link>
         <span className="text-zinc-700">|</span>
         <div className="flex-1">
@@ -137,15 +137,15 @@ export default function CommunityTheater() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel — outline reference */}
         {panelOpen && (
-          <aside className="w-72 shrink-0 border-r border-zinc-800 flex flex-col overflow-hidden">
+          <aside className="w-[min(100%,28rem)] shrink-0 border-r border-zinc-800 flex flex-col overflow-hidden max-md:max-w-[85vw]">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <span className="text-zinc-500 text-xs uppercase tracking-widest font-medium">Your Outline</span>
+              <span className="text-zinc-500 text-xs uppercase tracking-widest font-medium">Emotional Outline</span>
               <button onClick={() => setPanelOpen(false)} className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">
                 ←
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-5">
-              {scene?.outline && <OutlineReference outline={scene.outline} />}
+              {scene?.outline && <EmotionalOutlineMirror outline={scene.outline} />}
             </div>
           </aside>
         )}
@@ -154,7 +154,7 @@ export default function CommunityTheater() {
           <button
             onClick={() => setPanelOpen(true)}
             className="w-8 border-r border-zinc-800 flex items-center justify-center text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/30 transition-colors shrink-0"
-            title="Show outline (Cmd+\)"
+            title="Show Emotional Outline (Cmd+\)"
           >
             <span className="rotate-90 text-xs">▶</span>
           </button>
@@ -181,7 +181,7 @@ export default function CommunityTheater() {
           {/* Footer */}
           <div className="border-t border-zinc-800 px-8 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-zinc-700 text-xs">Auto-saves · Cmd+\ toggles outline</span>
+              <span className="text-zinc-700 text-xs">Auto-saves · Cmd+\ toggles emotional outline</span>
               <button
                 onClick={() => setShowHistory(true)}
                 className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors"

@@ -204,7 +204,7 @@ export default function SceneOutline() {
           to={`/project/${projectId}`}
           className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors shrink-0"
         >
-          ← Scenes
+          ← Beats
         </Link>
         <span className="text-zinc-700">|</span>
         <div className="flex-1 min-w-0">
@@ -348,12 +348,6 @@ export default function SceneOutline() {
                 .map((c) => (
                   <CharacterSummary key={c.id} character={c} settingPlot={settingPlot} showSettingPlot={false} />
                 ))
-            )}
-            {settingPlot && (
-              <div className="pt-4 border-t border-zinc-800 space-y-1">
-                <p className="text-zinc-600 text-xs font-medium uppercase tracking-wide">Setting / Plot</p>
-                <p className="text-zinc-400 text-sm leading-relaxed">{settingPlot}</p>
-              </div>
             )}
           </div>
         </div>

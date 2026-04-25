@@ -110,10 +110,10 @@ export default function CompileModal({ scenes, defaultTitle = '', onClose }: Pro
             </p>
           </div>
 
-          {/* Scene summary */}
+          {/* Beat summary */}
           <div className="space-y-2">
             <label className="block text-zinc-500 text-xs uppercase tracking-widest font-medium">
-              Scenes in this export
+              Beats in this export
             </label>
             <div className="bg-zinc-800/60 rounded-lg divide-y divide-zinc-800 max-h-48 overflow-y-auto">
               {sorted.map((scene, i) => {
@@ -124,7 +124,7 @@ export default function CompileModal({ scenes, defaultTitle = '', onClose }: Pro
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <span className={`text-xs flex-1 truncate font-mono ${hasContent ? 'text-zinc-300' : 'text-zinc-600 italic'}`}>
-                      {scene.sceneHeader || 'Untitled scene'}
+                      {scene.sceneHeader || 'Untitled beat'}
                     </span>
                     <span className={`text-[10px] shrink-0 ${hasContent ? 'text-zinc-500' : 'text-zinc-700'}`}>
                       {hasContent ? 'included' : 'no liars pass'}
@@ -135,7 +135,7 @@ export default function CompileModal({ scenes, defaultTitle = '', onClose }: Pro
             </div>
             {missing.length > 0 && (
               <p className="text-zinc-600 text-xs">
-                {missing.length} scene{missing.length !== 1 ? 's' : ''} without a Liars Pass will be skipped.
+                {missing.length} beat{missing.length !== 1 ? 's' : ''} without a Liars Pass will be skipped.
               </p>
             )}
           </div>

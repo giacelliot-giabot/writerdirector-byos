@@ -519,11 +519,11 @@ const QUICK_KEYS = [
   {
     section: 'Panels & Passes',
     keys: [
-      { keys: '⌘ \\', where: 'Anywhere', result: 'Toggle outline / reference panel' },
+      { keys: '⌘ \\', where: 'Anywhere', result: 'Toggle prior-pass panel (Emotional Outline or Community Theater)' },
       { keys: '⌘ S', where: 'Anywhere', result: 'Save now' },
       { keys: '⌘ →', where: 'Community Theater', result: 'Advance to Liars Pass' },
-      { keys: '⌘ ←', where: 'Community Theater', result: 'Back to Scenes' },
-      { keys: '⌘ ←', where: 'Liars Pass', result: 'Back to Scenes' },
+      { keys: '⌘ ←', where: 'Community Theater', result: 'Back to Beats' },
+      { keys: '⌘ ←', where: 'Liars Pass', result: 'Back to Beats' },
     ],
   },
   {

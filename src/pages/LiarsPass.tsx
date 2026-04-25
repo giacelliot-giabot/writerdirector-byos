@@ -10,7 +10,6 @@ import {
   type ScriptElement,
 } from '../lib/scenes'
 import ScriptEditor from '../components/ScriptEditor'
-import OutlineReference from '../components/OutlineReference'
 import VersionHistoryModal from '../components/VersionHistoryModal'
 import ProgressDots from '../components/ProgressDots'
 
@@ -127,7 +126,7 @@ export default function LiarsPass() {
       {/* Header */}
       <header className="border-b border-zinc-800 px-6 py-3 flex items-center gap-4">
         <Link to={`/project/${projectId}`} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors shrink-0">
-          ← Scenes
+          ← Beats
         </Link>
         <span className="text-zinc-700">|</span>
         <div className="flex-1">
@@ -139,31 +138,23 @@ export default function LiarsPass() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel — outline + CT reference */}
         {panelOpen && (
-          <aside className="w-72 shrink-0 border-r border-zinc-800 flex flex-col overflow-hidden">
+          <aside className="w-[min(100%,28rem)] shrink-0 border-r border-zinc-800 flex flex-col overflow-hidden max-md:max-w-[85vw]">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <span className="text-zinc-500 text-xs uppercase tracking-widest font-medium">Reference</span>
+              <span className="text-zinc-500 text-xs uppercase tracking-widest font-medium">Community Theater</span>
               <button onClick={() => setPanelOpen(false)} className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">
                 ←
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {/* CT draft */}
-              {ctBlocks.length > 0 && (
-                <div className="px-4 pt-5 pb-4 border-b border-zinc-800">
-                  <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-medium mb-3">Community Theater</p>
-                  <div className="space-y-0.5 opacity-60">
-                    {ctBlocks.map((block) => (
-                      <CTBlockPreview key={block.id} block={block} />
-                    ))}
-                  </div>
+            <div className="flex-1 overflow-y-auto px-4 py-5 pb-8">
+              {ctBlocks.length > 0 ? (
+                <div className="space-y-0.5 opacity-80">
+                  {ctBlocks.map((block) => (
+                    <CTBlockPreview key={block.id} block={block} />
+                  ))}
                 </div>
+              ) : (
+                <p className="text-zinc-600 text-xs leading-relaxed">No Community Theater draft yet.</p>
               )}
-
-              {/* Outline */}
-              <div className="px-4 pt-5 pb-8">
-                <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-medium mb-3">Your Outline</p>
-                {scene?.outline && <OutlineReference outline={scene.outline} />}
-              </div>
             </div>
           </aside>
         )}
@@ -172,7 +163,7 @@ export default function LiarsPass() {
           <button
             onClick={() => setPanelOpen(true)}
             className="w-8 border-r border-zinc-800 flex items-center justify-center text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/30 transition-colors shrink-0"
-            title="Show reference (Cmd+\)"
+            title="Show Community Theater (Cmd+\)"
           >
             <span className="rotate-90 text-xs">▶</span>
           </button>
@@ -199,7 +190,7 @@ export default function LiarsPass() {
           {/* Footer */}
           <div className="border-t border-zinc-800 px-8 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-zinc-700 text-xs">Auto-saves · Cmd+\ toggles reference</span>
+              <span className="text-zinc-700 text-xs">Auto-saves · Cmd+\ toggles Community Theater</span>
               <button
                 onClick={() => setShowHistory(true)}
                 className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
@@ -223,10 +214,10 @@ export default function LiarsPass() {
                 onClick={markComplete}
                 className="flex items-center gap-2 bg-zinc-100 text-zinc-900 font-semibold text-sm px-5 py-2 rounded-lg hover:bg-white transition-colors"
               >
-                Done — Back to Scenes ✓
+                Done — Back to Beats ✓
               </button>
             ) : (
-              <span className="text-zinc-700 text-xs">Write the real scene →</span>
+              <span className="text-zinc-700 text-xs">Write the real beat →</span>
             )}
           </div>
         </div>

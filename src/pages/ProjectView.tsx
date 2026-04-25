@@ -417,7 +417,7 @@ export default function ProjectView() {
           <h1 className="text-zinc-100 font-semibold text-base">Plot Your Beats</h1>
           <p className="text-zinc-500 text-xs mt-0.5 leading-relaxed">
             What happens, in what order? Lay out every beat as a card. Add act breaks or
-            midpoints to mark structure. When you're ready to dive into a scene, hit Open.
+            midpoints to mark structure. When you&apos;re ready to dive into a beat, hit Open.
           </p>
         </div>
         <button
@@ -425,9 +425,9 @@ export default function ProjectView() {
           disabled={!compileReady}
           title={
             !hasScenes
-              ? 'Add scenes first'
+              ? 'Add beats first'
               : !compileReady
-              ? 'Complete the Liars Pass for all scenes to compile'
+              ? 'Complete the Liars Pass for all beats to compile'
               : undefined
           }
           className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors shrink-0"
@@ -448,9 +448,9 @@ export default function ProjectView() {
               <button
                 onClick={handleAddScene}
                 className="text-zinc-400 hover:text-zinc-200 text-xs transition-colors"
-                title="Add scene card"
+                title="Add beat card"
               >
-                + Scene
+                + Beat
               </button>
               <button
                 onClick={handleAddDivider}
@@ -494,7 +494,7 @@ export default function ProjectView() {
 
             {scenes.length === 0 && (
               <p className="text-zinc-600 text-xs text-center py-8 px-4">
-                No beats yet. Click + Scene to add one.
+                No beats yet. Click + Beat to add one.
               </p>
             )}
           </div>
@@ -607,7 +607,7 @@ export default function ProjectView() {
 
               {filteredScenes.length === 0 && selectedCharacter && (
                 <p className="text-zinc-600 text-sm text-center py-8">
-                  No scenes with <span className="text-zinc-400">{selectedCharacter}</span>.
+                  No beats with <span className="text-zinc-400">{selectedCharacter}</span>.
                 </p>
               )}
 
@@ -618,7 +618,7 @@ export default function ProjectView() {
                     onClick={handleAddScene}
                     className="text-zinc-400 hover:text-zinc-200 text-sm border border-dashed border-zinc-700 hover:border-zinc-500 rounded-lg px-4 py-2 transition-colors"
                   >
-                    + Add scene beat
+                    + Add beat
                   </button>
                   <button
                     onClick={handleAddDivider}
@@ -802,7 +802,7 @@ function SceneCard({
         <textarea
           value={description}
           rows={1}
-          placeholder="What happens in this scene…"
+          placeholder="What happens in this beat…"
           onChange={(e) => {
             setDescription(e.target.value)
             e.target.style.height = 'auto'
@@ -906,7 +906,7 @@ function SceneCard({
             ? 'shrink-0 text-zinc-700 hover:text-zinc-300 text-xs font-medium px-2 py-1.5 transition-colors mt-0.5 opacity-0 group-hover/card:opacity-100'
             : 'shrink-0 text-zinc-500 hover:text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors mt-0.5'
         }
-        title={scene.state === 'untouched' ? 'Open and start outlining this scene' : 'Continue outlining'}
+        title={scene.state === 'untouched' ? 'Open and start outlining this beat' : 'Continue outlining'}
       >
         Open →
       </button>
