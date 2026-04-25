@@ -195,11 +195,6 @@ export default function SceneOutline() {
   }
 
   const activeCharacter = characters.find((c) => c.id === activeCharacterId) || null
-  const isComplete = outlineIsComplete({
-    characters,
-    settingPlot,
-    completedAt: null,
-  })
 
   return (
     <div className="min-h-screen flex flex-col">

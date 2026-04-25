@@ -27,12 +27,13 @@ const slides: Slide[] = [
   },
   {
     icon: <ListIcon />,
-    title: 'Create an Outline of Scenes',
+    title: 'Plot the beats first',
+    subtitle: 'Before diving into any scene, lay out what happens, in what order. One card per beat — like index cards on a wall.',
     bullets: [
-      'Start by creating an outline of all your scenes. If you use physical index cards, you can start there and then transcribe them here.',
-      'Add descriptions of the plot and point of each scene.',
-      'Drag scenes to reorder them seamlessly at any time.',
-      'Filter by Character view to follow any character\'s arc across scenes.',
+      'Type a one-line beat for every scene before opening any of them. The page is built for staying here and thinking in order.',
+      'Drag cards to reorder freely. Use + Break to drop in act breaks, midpoints, or anything else you want to mark — name them whatever you like.',
+      'Scene numbers reset under each break, so your structure is legible at a glance.',
+      'Filter by character to follow any one arc across the beats.',
     ],
   },
   {

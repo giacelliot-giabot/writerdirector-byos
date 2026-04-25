@@ -507,7 +507,7 @@ export default function ProjectView() {
 
 function SortableSceneCard(props: {
   scene: Scene
-  index: number
+  sectionIndex: number
   projectId: string
   onOpen: () => void
   onRename: (header: string) => void
@@ -532,7 +532,7 @@ function SortableSceneCard(props: {
 
 function SceneCard({
   scene,
-  index,
+  sectionIndex,
   projectId,
   onOpen,
   onRename,
@@ -542,7 +542,7 @@ function SceneCard({
   charColorMap,
 }: {
   scene: Scene
-  index: number
+  sectionIndex: number
   projectId: string
   onOpen: () => void
   onRename: (header: string) => void
@@ -595,7 +595,7 @@ function SceneCard({
           >
             ⠿
           </span>
-          <span className="text-zinc-600 text-xs font-mono shrink-0">{String(index + 1).padStart(2, '0')}</span>
+          <span className="text-zinc-600 text-xs font-mono shrink-0">{String(sectionIndex).padStart(2, '0')}</span>
           {editing ? (
             <input
               ref={inputRef}
@@ -666,11 +666,184 @@ function SceneCard({
           })}
         </div>
       </div>
+      {/*
+        Open button: visually de-emphasized for untouched scenes so the page
+        reads as "stay here and plot beats" rather than "click in immediately".
+        Once any work has started, the bordered button comes back so users
+        can resume quickly.
+      */}
       <button
         onClick={onOpen}
-        className="shrink-0 text-zinc-500 hover:text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors mt-0.5"
+        className={
+          scene.state === 'untouched'
+            ? 'shrink-0 text-zinc-700 hover:text-zinc-300 text-xs font-medium px-2 py-1.5 transition-colors mt-0.5 opacity-0 group-hover/card:opacity-100'
+            : 'shrink-0 text-zinc-500 hover:text-zinc-200 text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-colors mt-0.5'
+        }
+        title={scene.state === 'untouched' ? 'Open and start outlining this scene' : 'Continue outlining'}
       >
         Open →
+      </button>
+    </div>
+  )
+}
+
+function SortableDividerBar(props: {
+  divider: Scene
+  onLabelChange: (label: string) => void
+  onColorChange: (color: string | null) => void
+  onDelete: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: props.divider.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className={isDragging ? 'opacity-50' : ''}>
+      <DividerBar {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  )
+}
+
+function DividerBar({
+  divider,
+  onLabelChange,
+  onColorChange,
+  onDelete,
+  dragHandleProps,
+}: {
+  divider: Scene
+  onLabelChange: (label: string) => void
+  onColorChange: (color: string | null) => void
+  onDelete: () => void
+  dragHandleProps?: React.HTMLAttributes<HTMLSpanElement>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(divider.label || '')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  useEffect(() => {
+    if (!editing) setDraft(divider.label || '')
+  }, [divider.label, editing])
+
+  function commit() {
+    setEditing(false)
+    onLabelChange(draft.trim())
+  }
+
+  const accent = divider.color
+    ? COLOR_PALETTE.find((p) => p.key === divider.color)?.swatch
+    : undefined
+  const labelColor = accent ?? '#71717a'
+  const ruleColor = accent ?? '#3f3f46'
+
+  return (
+    <div className="group/divider flex items-center gap-2 py-3 select-none">
+      {/* Drag handle */}
+      <span
+        {...dragHandleProps}
+        className="text-zinc-700 hover:text-zinc-400 cursor-grab active:cursor-grabbing text-sm shrink-0 opacity-0 group-hover/divider:opacity-100 transition-opacity"
+        title="Drag to reorder"
+      >
+        ⠿
+      </span>
+
+      {/* Color dot — opens picker */}
+      <button
+        onClick={() => setPickerOpen((o) => !o)}
+        className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-black/20 opacity-60 hover:opacity-100 transition-opacity relative"
+        style={{ background: accent ?? MONOCHROME.idle.color }}
+        title="Pick accent color"
+      >
+        {pickerOpen && (
+          <div
+            className="absolute top-full left-0 mt-2 z-50 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-4"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-3">Accent</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { onColorChange(null); setPickerOpen(false) }}
+                title="None"
+                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                  !divider.color ? 'border-white scale-110' : 'border-zinc-700 hover:border-zinc-500'
+                }`}
+                style={{ background: MONOCHROME.idle.background }}
+              >
+                <span style={{ color: MONOCHROME.idle.color }} className="text-[10px] font-bold leading-none">—</span>
+              </button>
+              <div className="w-px h-6 bg-zinc-700 mx-1" />
+              <div className="grid grid-cols-6 gap-2">
+                {COLOR_PALETTE.map((entry) => (
+                  <button
+                    key={entry.key}
+                    onClick={() => { onColorChange(entry.key); setPickerOpen(false) }}
+                    title={entry.label}
+                    className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
+                      divider.color === entry.key ? 'border-white scale-110' : 'border-transparent'
+                    }`}
+                    style={{ background: entry.swatch }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </button>
+      {pickerOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} />
+      )}
+
+      {/* Left rule */}
+      <div className="flex-1 border-t" style={{ borderColor: ruleColor }} />
+
+      {/* Label — click to edit */}
+      {editing ? (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') { setDraft(divider.label || ''); setEditing(false) }
+          }}
+          placeholder="e.g. Act One, Midpoint, Climax"
+          className="bg-transparent text-center text-xs uppercase tracking-widest font-semibold outline-none border-b border-zinc-600 focus:border-zinc-400 px-2 py-0.5 min-w-[8rem]"
+          style={{ color: labelColor }}
+        />
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          className="text-xs uppercase tracking-widest font-semibold whitespace-nowrap px-2 py-0.5 hover:text-zinc-100 transition-colors"
+          style={{ color: labelColor }}
+          title="Click to rename"
+        >
+          {divider.label?.trim() || (
+            <span className="italic opacity-70">Untitled break</span>
+          )}
+        </button>
+      )}
+
+      {/* Right rule */}
+      <div className="flex-1 border-t" style={{ borderColor: ruleColor }} />
+
+      {/* Delete */}
+      <button
+        onClick={onDelete}
+        className="text-zinc-700 hover:text-red-400 text-xs shrink-0 opacity-0 group-hover/divider:opacity-100 transition-all"
+        title="Delete break"
+      >
+        ✕
       </button>
     </div>
   )
